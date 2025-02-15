@@ -6,7 +6,10 @@ import {
 } from "./dto/update-room.dto";
 import { PrismaService } from "src/prisma/prisma.service";
 import { Prisma, typeRoomWaterAndElectricity } from "@prisma/client";
-import { FilterRoomDto } from "./dto/filter-room.dto";
+import {
+  FilterRoomDto,
+  FilterRoomWaterUnitAndElectricityUnitDto,
+} from "./dto/filter-room.dto";
 import _ from "lodash";
 import dayjs from "dayjs";
 import { wrapMeta } from "src/libs/meta/wrap-meta";
@@ -19,78 +22,88 @@ export class RoomService {
   }
   async createRoom(input: CreateRoomDto) {
     try {
-      const created: Prisma.roomCreateArgs = {
-        data: {
-          nameRoom: input.nameRoom,
-          type: input.type,
-          status: input.status,
-          dateOfStay: input?.dateOfStay
-            ? dayjs(input.dateOfStay).toDate()
-            : null,
-          issueDate: input?.issueDate ? dayjs(input.issueDate).toDate() : null,
-          rent:
-            input.rent && input.rent.length > 0
-              ? {
-                  createMany: {
-                    data: input.rent,
-                  },
-                }
-              : undefined,
+      let response: number[] = [];
+      for (const value of input.room) {
+        const created: Prisma.roomCreateArgs = {
+          data: {
+            nameRoom: value.nameRoom,
+            type: input.type,
+            status: value.status,
+            dateOfStay: value?.dateOfStay
+              ? dayjs(value.dateOfStay).toDate()
+              : null,
+            issueDate: value?.issueDate
+              ? dayjs(value.issueDate).toDate()
+              : null,
+            rent:
+              value.rent && value.rent.length > 0
+                ? {
+                    createMany: {
+                      data: value.rent,
+                    },
+                  }
+                : undefined,
 
-          serviceFee:
-            input.serviceFee && input.serviceFee.length > 0
-              ? {
-                  createMany: {
-                    data: input.serviceFee,
-                  },
-                }
-              : undefined,
-        },
-        select: {
-          id: true,
-        },
-      };
-      const result = await this.prisma.room.create(created).catch((error) => {
-        this.logger.error(error);
-        throw new HttpException(`สร้างข้อมูลไม่สำเร็จ`, HttpStatus.BAD_REQUEST);
-      });
-      if (result) {
-        let contactId: number | null = null; // แก้ให้สามารถเป็น null ได้
-        let companyId: number | null = null; // แก้ให้สามารถเป็น null ได้
-        if (input.contact) {
-          const createdContact = await this.prisma.roomContact.create({
-            data: {
-              name: input.contact.name,
-              phone: input.contact.phone,
-              idCard: input.contact.idCard,
-              address: input.contact.address,
-              roomId: result.id, // เชื่อมกับ Room
-            },
-          });
-          contactId = createdContact.id; // ไม่ error แล้ว
-        }
-        if (input.company) {
-          const createdCompany = await this.prisma.roomCompany.create({
-            data: {
-              name: input.company.name,
-              phone: input.company.phone,
-              idTax: input.company.idTax,
-              address: input.company.address,
-              roomId: result.id,
-            },
-          });
-          companyId = createdCompany.id;
-        }
-        if (contactId || companyId) {
-          await this.prisma.room.update({
-            where: { id: result.id },
-            data: { roomContactId: contactId, roomCompanyId: companyId },
-          });
-        }
-        return {
-          id: result.id,
+            serviceFee:
+              value.serviceFee && value.serviceFee.length > 0
+                ? {
+                    createMany: {
+                      data: value.serviceFee,
+                    },
+                  }
+                : undefined,
+          },
+          select: {
+            id: true,
+          },
         };
+        const result = await this.prisma.room.create(created).catch((error) => {
+          this.logger.error(error);
+          throw new HttpException(
+            `สร้างข้อมูลไม่สำเร็จ`,
+            HttpStatus.BAD_REQUEST
+          );
+        });
+        if (result) {
+          let contactId: number | null = null; // แก้ให้สามารถเป็น null ได้
+          let companyId: number | null = null; // แก้ให้สามารถเป็น null ได้
+          if (input.contact) {
+            const createdContact = await this.prisma.roomContact.create({
+              data: {
+                name: input.contact.name,
+                phone: input.contact.phone,
+                idCard: input.contact.idCard,
+                address: input.contact.address,
+                roomId: result.id, // เชื่อมกับ Room
+              },
+            });
+            contactId = createdContact.id; // ไม่ error แล้ว
+          }
+          if (input.company) {
+            const createdCompany = await this.prisma.roomCompany.create({
+              data: {
+                name: input.company.name,
+                phone: input.company.phone,
+                idTax: input.company.idTax,
+                address: input.company.address,
+                roomId: result.id,
+              },
+            });
+            companyId = createdCompany.id;
+          }
+          if (contactId || companyId) {
+            await this.prisma.room.update({
+              where: { id: result.id },
+              data: { roomContactId: contactId, roomCompanyId: companyId },
+            });
+          }
+          response.push(result.id);
+        }
       }
+
+      return {
+        id: response,
+      };
     } catch (error) {
       this.logger.error(error);
       throw new HttpException(error?.message, HttpStatus.BAD_REQUEST);
@@ -105,8 +118,6 @@ export class RoomService {
       const count = await this.prisma.room.count({ where: filter });
       const result = await this.prisma.room.findMany({
         where: filter,
-        skip: input.showDataAll ? 0 : (input.page - 1) * input.limit,
-        take: input.limit,
         include: {
           roomCompany: true,
           roomContact: true,
@@ -116,6 +127,8 @@ export class RoomService {
         orderBy: {
           nameRoom: "asc",
         },
+        skip: input.showDataAll ? 0 : (input.page - 1) * input.limit,
+        take: input.limit,
       });
       return wrapMeta(
         result.map((el) => {
@@ -416,6 +429,80 @@ export class RoomService {
       return {
         id: input.map((el) => el.roomId),
       };
+    } catch (error) {
+      this.logger.error(error);
+      throw new HttpException(error?.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async findWaterUnit(input: FilterRoomWaterUnitAndElectricityUnitDto) {
+    try {
+      const result = await this.prisma.room.findMany({
+        include: {
+          transactionWaterUnit: {
+            where: {
+              month: input.month,
+              year: input.year,
+            },
+          },
+        },
+        orderBy: {
+          nameRoom: "asc",
+        },
+      });
+      return result.map((el) => {
+        const transactionWaterUnit = el.transactionWaterUnit[0];
+        return {
+          nameRoom: el.nameRoom,
+          status: el.status,
+          type: el.type,
+          month: transactionWaterUnit ? transactionWaterUnit.month : null,
+          year: transactionWaterUnit ? transactionWaterUnit.year : null,
+          unitBefor: transactionWaterUnit ? transactionWaterUnit.unitBefor : 0,
+          unitAfter: transactionWaterUnit ? transactionWaterUnit.unitAfter : 0,
+        };
+      });
+    } catch (error) {
+      this.logger.error(error);
+      throw new HttpException(error?.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async findElectricityUnit(input: FilterRoomWaterUnitAndElectricityUnitDto) {
+    try {
+      const result = await this.prisma.room.findMany({
+        include: {
+          transactionElectricityUnit: {
+            where: {
+              month: input.month,
+              year: input.year,
+            },
+          },
+        },
+        orderBy: {
+          nameRoom: "asc",
+        },
+      });
+      return result.map((el) => {
+        const transactionElectricityUnit = el.transactionElectricityUnit[0];
+        return {
+          nameRoom: el.nameRoom,
+          status: el.status,
+          type: el.type,
+          month: transactionElectricityUnit
+            ? transactionElectricityUnit.month
+            : null,
+          year: transactionElectricityUnit
+            ? transactionElectricityUnit.year
+            : null,
+          unitBefor: transactionElectricityUnit
+            ? transactionElectricityUnit.unitBefor
+            : 0,
+          unitAfter: transactionElectricityUnit
+            ? transactionElectricityUnit.unitAfter
+            : 0,
+        };
+      });
     } catch (error) {
       this.logger.error(error);
       throw new HttpException(error?.message, HttpStatus.BAD_REQUEST);

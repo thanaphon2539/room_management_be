@@ -24,14 +24,18 @@ export class ServiceFeeDto {
   price: number;
 }
 
-export class CreateRoomDto {
+export class RoomDto {
   nameRoom: string;
-  type: typeRoom;
   status: statusRoom;
   dateOfStay: Date;
   issueDate: Date;
-  contact: ContactDto;
-  company: CompanyDto;
   rent: RentDto[];
   serviceFee: ServiceFeeDto[];
+}
+
+export class CreateRoomDto {
+  type: typeRoom;
+  contact: ContactDto;
+  company: CompanyDto;
+  room: RoomDto[];
 }

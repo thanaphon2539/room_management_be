@@ -23,7 +23,10 @@ import {
 import { HttpExceptionFilter } from "src/libs/exceptions/http.exception";
 import { HttpInterceptor } from "src/libs/interceptors/http.interceptor";
 import { AuthGuard } from "@nestjs/passport";
-import { FilterRoomDto } from "./dto/filter-room.dto";
+import {
+  FilterRoomDto,
+  FilterRoomWaterUnitAndElectricityUnitDto,
+} from "./dto/filter-room.dto";
 import { typeRoomWaterAndElectricity } from "@prisma/client";
 
 @UseGuards(AuthGuard("jwt"))
@@ -36,6 +39,16 @@ export class RoomController {
   @Post("create")
   createRoom(@Body() input: CreateRoomDto) {
     return this.roomService.createRoom(input);
+  }
+
+  @Get("waterunit")
+  findWaterUnit(@Query() input: FilterRoomWaterUnitAndElectricityUnitDto) {
+    return this.roomService.findWaterUnit(input);
+  }
+
+  @Get("electricityunit")
+  findElectricityUnit(@Query() input: FilterRoomWaterUnitAndElectricityUnitDto) {
+    return this.roomService.findElectricityUnit(input);
   }
 
   @Get()
