@@ -10,6 +10,8 @@ import {
   UseFilters,
   UseInterceptors,
   Query,
+  HttpCode,
+  HttpStatus,
 } from "@nestjs/common";
 import { UserService } from "./user.service";
 import { CreateUserDto } from "./dto/create-user.dto";
@@ -32,11 +34,13 @@ export class UserController {
   }
 
   @Get()
+  @HttpCode(HttpStatus.OK)
   findAll(@Query() input: SearchDto) {
     return this.userService.findAll(input);
   }
 
   @Get(":id")
+  @HttpCode(HttpStatus.OK)
   findOne(@Param("id") id: string) {
     return this.userService.findOne(+id);
   }

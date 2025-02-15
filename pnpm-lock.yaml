@@ -47,6 +47,9 @@ dependencies:
   express:
     specifier: ^4.21.2
     version: 4.21.2
+  lodash:
+    specifier: ^4.17.21
+    version: 4.17.21
   passport-jwt:
     specifier: ^4.0.1
     version: 4.0.1

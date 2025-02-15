@@ -19,7 +19,6 @@ export function wrapMeta<T>(
   page?: number,
   limit?: number
 ): CountMetaType<T> {
-  console.log(showDataAll)
   if (showDataAll) {
     return {
       data,

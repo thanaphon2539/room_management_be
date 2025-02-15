@@ -1,7 +1,6 @@
 import { HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { UpdatePasswordDto, UpdateUserDto } from "./dto/update-user.dto";
-import { AppService } from "src/app.service";
 import { PrismaService } from "src/prisma/prisma.service";
 import bcrypt from "bcrypt";
 import { Prisma } from "@prisma/client";
@@ -13,7 +12,7 @@ export class UserService {
   private readonly logger: Logger;
   private readonly saltRound: number;
   constructor(private readonly prisma: PrismaService) {
-    this.logger = new Logger(AppService.name);
+    this.logger = new Logger(UserService.name);
     this.saltRound = 10;
   }
   async create(createUserDto: CreateUserDto) {
@@ -29,6 +28,10 @@ export class UserService {
           },
           select: {
             id: true,
+            name: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
           },
         })
         .catch((error) => {
@@ -44,17 +47,37 @@ export class UserService {
   }
 
   async findAll(input: SearchDto) {
-    const filter: Prisma.UserWhereInput = {};
-    if (input.keyword) {
-      filter.name = { equals: input.keyword, mode: "insensitive" };
+    try {
+      const filter: Prisma.userWhereInput = {
+        isDelete: false,
+      };
+      if (input.keyword) {
+        filter.name = { contains: input.keyword, mode: "insensitive" };
+      }
+      const count = await this.prisma.user.count({ where: filter });
+      const result = await this.prisma.user.findMany({
+        where: filter,
+        skip: input.showDataAll ? 0 : (input.page - 1) * input.limit,
+        take: input.limit,
+        select: {
+          id: true,
+          name: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+      return wrapMeta(
+        result,
+        count,
+        input.showDataAll,
+        input.page,
+        input.limit
+      );
+    } catch (error) {
+      console.log("error >>>", error);
+      throw new HttpException(error?.message, HttpStatus.BAD_REQUEST);
     }
-    const count = await this.prisma.user.count({ where: filter });
-    const result = await this.prisma.user.findMany({
-      where: filter,
-      skip: input.showDataAll ? 0 : (input.page - 1) * input.limit,
-      take: input.limit,
-    });
-    return wrapMeta(result, count, input.showDataAll, input.page, input.limit);
   }
 
   async findOne(id: number) {
@@ -95,6 +118,9 @@ export class UserService {
       return this.prisma.user.update({
         where: { id: id },
         data: { name: updateUserDto.name },
+        select: {
+          id: true,
+        },
       });
     } catch (error) {
       throw error;
@@ -104,10 +130,12 @@ export class UserService {
   async remove(id: number) {
     try {
       await this.findOne(id);
-      return this.prisma.user.update({
+      await this.prisma.user.delete({
         where: { id: id },
-        data: { isDelete: true, isActive: false },
       });
+      return {
+        id: id,
+      };
     } catch (error) {
       throw error;
     }
@@ -123,6 +151,9 @@ export class UserService {
             updatePasswordDto.password,
             this.saltRound
           ),
+        },
+        select: {
+          id: true,
         },
       });
     } catch (error) {

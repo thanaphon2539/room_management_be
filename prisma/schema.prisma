@@ -13,7 +13,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
+model user {
   id       Int     @id @default(autoincrement())
   username String  @unique
   password String
@@ -26,4 +26,147 @@ model User {
 
   @@index([username])
   @@map("User")
+}
+
+model settingBillUnit {
+  id              Int      @id @default(autoincrement())
+  waterUnit       Int      @default(0)
+  electricityUnit Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now())
+
+  @@map("SettingBillUnit")
+}
+
+model settingContactAddress {
+  id      Int    @id @default(autoincrement())
+  name    String @default("")
+  phone   String @default("")
+  email   String @default("")
+  address String @default("")
+  company String @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@map("SettingContactAddress")
+}
+
+model room {
+  id         Int         @id @default(autoincrement())
+  nameRoom   String      @unique
+  type       typeRoom?
+  status     statusRoom?
+  dateOfStay DateTime?
+  issueDate  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  roomContact                roomContact?
+  roomContactId              Int?                         @unique
+  roomCompany                roomCompany?
+  roomCompanyId              Int?                         @unique
+  rent                       rent[]
+  serviceFee                 serviceFee[]
+  transactionWaterUnit       transactionWaterUnit[]
+  transactionElectricityUnit transactionElectricityUnit[]
+
+  @@map("Room")
+}
+
+model roomContact {
+  id      Int    @id @default(autoincrement())
+  name    String
+  phone   String
+  idCard  String
+  address String
+
+  room      room?    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roomId    Int?     @unique // ต้องเป็น @unique เพื่อให้แต่ละ Room มีแค่ 1 roomContact
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@map("RoomContact")
+}
+
+model roomCompany {
+  id      Int    @id @default(autoincrement())
+  name    String
+  phone   String
+  idTax   String
+  address String
+
+  room      room?    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roomId    Int?     @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@map("RoomCompany")
+}
+
+model rent {
+  id     Int     @id @default(autoincrement())
+  roomId Int
+  room   room    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  name   String?
+  price  Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@map("Rent")
+}
+
+model serviceFee {
+  id     Int     @id @default(autoincrement())
+  roomId Int
+  room   room    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  name   String?
+  price  Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@map("ServiceFee")
+}
+
+model transactionWaterUnit {
+  id        Int  @id @default(autoincrement())
+  roomId    Int
+  room      room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  month     Int
+  year      Int
+  unitBefor Int
+  unitAfter Int
+
+  @@map("TransactionWaterUnit")
+}
+
+model transactionElectricityUnit {
+  id        Int  @id @default(autoincrement())
+  roomId    Int
+  room      room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  month     Int
+  year      Int
+  unitBefor Int
+  unitAfter Int
+
+  @@map("TransactionElectricityUnit")
+}
+
+enum typeRoom {
+  legalEntity
+  person
+}
+
+enum statusRoom {
+  blank
+  busy
+  reserve
+}
+
+enum typeRoomWaterAndElectricity {
+  waterUnit
+  electricityUnit
 }
