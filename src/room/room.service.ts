@@ -5,7 +5,7 @@ import {
   UpdateRoomWaterUnitAndElectricityUnitDto,
 } from "./dto/update-room.dto";
 import { PrismaService } from "src/prisma/prisma.service";
-import { Prisma, typeRoomWaterAndElectricity } from "@prisma/client";
+import { Prisma, typeRoom, typeRoomWaterAndElectricity } from "@prisma/client";
 import {
   FilterRoomDto,
   FilterRoomWaterUnitAndElectricityUnitDto,
@@ -22,8 +22,26 @@ export class RoomService {
   }
   async createRoom(input: CreateRoomDto) {
     try {
+      console.log("input >>>", input);
       let response: number[] = [];
       for (const value of input.room) {
+        if (!value.nameRoom) {
+          throw new HttpException(
+            `กรุณากรอกข้อมูลชื่อห้อง`,
+            HttpStatus.BAD_REQUEST
+          );
+        }
+        const checkNameRoom = await this.prisma.room.findFirst({
+          where: {
+            nameRoom: value.nameRoom,
+          },
+        });
+        if (checkNameRoom) {
+          throw new HttpException(
+            `ไม่สามารถสร้างได้เนื่องจากมีห้องหมายเลขนี้อยู่ในระบบแล้ว`,
+            HttpStatus.BAD_REQUEST
+          );
+        }
         const created: Prisma.roomCreateArgs = {
           data: {
             nameRoom: value.nameRoom,
@@ -70,11 +88,12 @@ export class RoomService {
           if (input.contact) {
             const createdContact = await this.prisma.roomContact.create({
               data: {
-                name: input.contact.name,
-                phone: input.contact.phone,
-                idCard: input.contact.idCard,
-                address: input.contact.address,
+                name: input.contact?.name,
+                phone: input.contact?.phone,
+                idCard: input.contact?.idCard,
+                address: input.contact?.address,
                 roomId: result.id, // เชื่อมกับ Room
+                licensePlate: input.contact?.licensePlate,
               },
             });
             contactId = createdContact.id; // ไม่ error แล้ว
@@ -82,10 +101,10 @@ export class RoomService {
           if (input.company) {
             const createdCompany = await this.prisma.roomCompany.create({
               data: {
-                name: input.company.name,
-                phone: input.company.phone,
-                idTax: input.company.idTax,
-                address: input.company.address,
+                name: input.company?.name,
+                phone: input.company?.phone,
+                idTax: input.company?.idTax,
+                address: input.company?.address,
                 roomId: result.id,
               },
             });
@@ -190,7 +209,7 @@ export class RoomService {
     }
   }
 
-  async updateRoom(id: number, updateRoomDto: UpdateRoomDto) {
+  async updateRoom(id: number, input: UpdateRoomDto) {
     try {
       const checkRoom = await this.prisma.room.findUnique({
         where: { id },
@@ -208,86 +227,91 @@ export class RoomService {
       /** ต้องมีการเพิ่ม function เช็คการจ่ายบิล */
       let roomContactId: any;
       let roomCompanyId: any;
-      if (updateRoomDto.contact.id) {
-        const checkRoomContact = await this.prisma.roomContact.findFirst({
-          where: { id: updateRoomDto.contact.id, roomId: id },
-        });
-        if (!checkRoomContact) {
-          throw new HttpException(
-            `ไม่พบข้อมูลผู้ติดต่อที่ต้องการแก้ไข`,
-            HttpStatus.BAD_REQUEST
-          );
+      if (input.contact) {
+        if (input.contact.id) {
+          const checkRoomContact = await this.prisma.roomContact.findFirst({
+            where: { id: input.contact.id, roomId: id },
+          });
+          if (!checkRoomContact) {
+            throw new HttpException(
+              `ไม่พบข้อมูลผู้ติดต่อที่ต้องการแก้ไข`,
+              HttpStatus.BAD_REQUEST
+            );
+          }
+          roomContactId = (
+            await this.prisma.roomContact.update({
+              where: {
+                id: checkRoomContact.id,
+              },
+              data: {
+                name: input.contact?.name,
+                phone: input.contact?.phone,
+                idCard: input.contact?.idCard,
+                address: input.contact?.address,
+                updatedAt: dayjs().toDate(),
+                licensePlate: input.contact?.licensePlate,
+              },
+            })
+          ).id;
+        } else {
+          roomContactId = (
+            await this.prisma.roomContact.create({
+              data: {
+                roomId: id,
+                name: input.contact?.name,
+                phone: input.contact?.phone,
+                idCard: input.contact?.idCard,
+                address: input.contact?.address,
+                licensePlate: input.contact?.licensePlate,
+              },
+            })
+          ).id;
         }
-        roomContactId = (
-          await this.prisma.roomContact.update({
-            where: {
-              id: checkRoomContact.id,
-            },
-            data: {
-              name: updateRoomDto.contact.name,
-              phone: updateRoomDto.contact.phone,
-              idCard: updateRoomDto.contact.idCard,
-              address: updateRoomDto.contact.address,
-              updatedAt: dayjs().toDate(),
-            },
-          })
-        ).id;
-      } else {
-        roomContactId = (
-          await this.prisma.roomContact.create({
-            data: {
-              roomId: id,
-              name: updateRoomDto.contact.name,
-              phone: updateRoomDto.contact.phone,
-              idCard: updateRoomDto.contact.idCard,
-              address: updateRoomDto.contact.address,
-            },
-          })
-        ).id;
       }
-      if (updateRoomDto.company.id) {
-        const checkRoomCompany = await this.prisma.roomCompany.findFirst({
-          where: { id: updateRoomDto.company.id, roomId: id },
-        });
-        if (!checkRoomCompany) {
-          throw new HttpException(
-            `ไม่พบข้อมูลบริษัทที่ต้องการแก้ไข`,
-            HttpStatus.BAD_REQUEST
-          );
+      if (input.company) {
+        if (input.company.id) {
+          const checkRoomCompany = await this.prisma.roomCompany.findFirst({
+            where: { id: input.company.id, roomId: id },
+          });
+          if (!checkRoomCompany) {
+            throw new HttpException(
+              `ไม่พบข้อมูลบริษัทที่ต้องการแก้ไข`,
+              HttpStatus.BAD_REQUEST
+            );
+          }
+          roomCompanyId = (
+            await this.prisma.roomCompany.update({
+              where: {
+                id: checkRoomCompany.id,
+              },
+              data: {
+                name: input.company?.name,
+                phone: input.company?.phone,
+                idTax: input.company?.idTax,
+                address: input.company?.address,
+                updatedAt: dayjs().toDate(),
+              },
+            })
+          ).id;
+        } else {
+          roomCompanyId = (
+            await this.prisma.roomCompany.create({
+              data: {
+                roomId: id,
+                name: input.company?.name,
+                phone: input.company?.phone,
+                idTax: input.company?.idTax,
+                address: input.company?.address,
+              },
+            })
+          ).id;
         }
-        roomCompanyId = (
-          await this.prisma.roomCompany.update({
-            where: {
-              id: checkRoomCompany.id,
-            },
-            data: {
-              name: updateRoomDto.company.name,
-              phone: updateRoomDto.company.phone,
-              idTax: updateRoomDto.company.idTax,
-              address: updateRoomDto.company.address,
-              updatedAt: dayjs().toDate(),
-            },
-          })
-        ).id;
-      } else {
-        roomCompanyId = (
-          await this.prisma.roomCompany.create({
-            data: {
-              roomId: id,
-              name: updateRoomDto.company.name,
-              phone: updateRoomDto.company.phone,
-              idTax: updateRoomDto.company.idTax,
-              address: updateRoomDto.company.address,
-              updatedAt: dayjs().toDate(),
-            },
-          })
-        ).id;
       }
-      if (updateRoomDto.rent.length > 0) {
+      if (input.rent.length > 0) {
         const result = checkRoom.rent
           .map((el) => el.id)
           .reduce((acc, x) => {
-            if (!updateRoomDto.rent.map((el) => el.id).includes(x)) {
+            if (!input.rent.map((el) => el.id).includes(x)) {
               acc.push(x);
             }
             return acc;
@@ -298,24 +322,34 @@ export class RoomService {
             roomId: id,
           },
         });
-        for (const rent of updateRoomDto.rent) {
-          await this.prisma.rent.update({
-            where: {
-              id: rent.id,
-              roomId: id,
-            },
-            data: {
-              name: rent.name,
-              price: rent.price,
-            },
-          });
+        for (const rent of input.rent) {
+          if (!rent?.id) {
+            await this.prisma.rent.create({
+              data: {
+                roomId: id,
+                name: rent.name,
+                price: rent.price,
+              },
+            });
+          } else {
+            await this.prisma.rent.update({
+              where: {
+                id: rent.id,
+                roomId: id,
+              },
+              data: {
+                name: rent.name,
+                price: rent.price,
+              },
+            });
+          }
         }
       }
-      if (updateRoomDto.serviceFee.length > 0) {
+      if (input.serviceFee.length > 0) {
         const result = checkRoom.rent
           .map((el) => el.id)
           .reduce((acc, x) => {
-            if (!updateRoomDto.serviceFee.map((el) => el.id).includes(x)) {
+            if (!input.serviceFee.map((el) => el.id).includes(x)) {
               acc.push(x);
             }
             return acc;
@@ -326,7 +360,7 @@ export class RoomService {
             roomId: id,
           },
         });
-        for (const serviceFee of updateRoomDto.serviceFee) {
+        for (const serviceFee of input.serviceFee) {
           await this.prisma.serviceFee.update({
             where: {
               id: serviceFee.id,
@@ -339,16 +373,31 @@ export class RoomService {
           });
         }
       }
+      if (input.type !== checkRoom.type) {
+        if (checkRoom.roomCompanyId) {
+          await this.prisma.roomCompany.delete({
+            where: { id: checkRoom.roomCompanyId },
+          });
+          await this.prisma.room.update({
+            where: { id: id },
+            data: {
+              roomCompanyId: null,
+            },
+          });
+        }
+      }
       const result = await this.prisma.room.update({
         where: {
           id: id,
         },
         data: {
-          nameRoom: updateRoomDto.nameRoom,
-          type: updateRoomDto.type,
-          status: updateRoomDto.status,
-          dateOfStay: updateRoomDto.dateOfStay,
-          issueDate: updateRoomDto.issueDate,
+          nameRoom: input.nameRoom,
+          type: input.type,
+          status: input.status,
+          dateOfStay: input.dateOfStay
+            ? dayjs(input.dateOfStay).toDate()
+            : null,
+          issueDate: input.issueDate ? dayjs(input.issueDate).toDate() : null,
           roomContactId: roomContactId,
           roomCompanyId: roomCompanyId,
           updatedAt: dayjs().toDate(),
@@ -399,7 +448,7 @@ export class RoomService {
           where: { id: room.roomId },
         });
         if (checkroom) {
-          if (room.unitAfter <= room.unitBefor) {
+          if (room.unitAfter <= room.unitBefor && room.unitBefor !== 0) {
             throw new HttpException(
               `ค่าของเดือนก่อนหน้าห้ามมีค่น้อยกว่าหรือเท่ากับเดือนปัจจุบัน`,
               HttpStatus.BAD_REQUEST
@@ -437,13 +486,28 @@ export class RoomService {
 
   async findWaterUnit(input: FilterRoomWaterUnitAndElectricityUnitDto) {
     try {
+      const dateFilterBefor = dayjs(
+        `${input.year}-${input.month < 9 ? "0" + input.month : input.month}`
+      )
+        .add(-1, "months")
+        .format("YYYY-MM")
+        .split("-");
+      // console.log("dateFilterAfter >>>", dateFilterBefor);
       const result = await this.prisma.room.findMany({
         include: {
           transactionWaterUnit: {
             where: {
-              month: input.month,
-              year: input.year,
+              month: { in: [input.month, Number(dateFilterBefor[1])] },
+              year: { in: [input.year, Number(dateFilterBefor[0])] },
             },
+            orderBy: [
+              {
+                month: "desc",
+              },
+              {
+                year: "desc",
+              },
+            ],
           },
         },
         orderBy: {
@@ -451,15 +515,32 @@ export class RoomService {
         },
       });
       return result.map((el) => {
-        const transactionWaterUnit = el.transactionWaterUnit[0];
+        let unitBefor = 0;
+        let unitAfter = 0;
+        if (el.transactionWaterUnit.length === 2) {
+          unitBefor = el.transactionWaterUnit[1]?.unitAfter;
+          unitAfter = el.transactionWaterUnit[0]?.unitAfter;
+        } else {
+          unitBefor =
+            el.transactionWaterUnit[0] &&
+            el.transactionWaterUnit[0]?.month !== input.month
+              ? el.transactionWaterUnit[0]?.unitAfter
+              : 0;
+          unitAfter =
+            el.transactionWaterUnit[0] &&
+            el.transactionWaterUnit[0]?.month === input.month
+              ? el.transactionWaterUnit[0]?.unitAfter
+              : 0;
+        }
         return {
+          id: el.id,
           nameRoom: el.nameRoom,
           status: el.status,
           type: el.type,
-          month: transactionWaterUnit ? transactionWaterUnit.month : null,
-          year: transactionWaterUnit ? transactionWaterUnit.year : null,
-          unitBefor: transactionWaterUnit ? transactionWaterUnit.unitBefor : 0,
-          unitAfter: transactionWaterUnit ? transactionWaterUnit.unitAfter : 0,
+          month: input.month,
+          year: input.year,
+          unitBefor: unitBefor,
+          unitAfter: unitAfter,
         };
       });
     } catch (error) {
@@ -470,13 +551,27 @@ export class RoomService {
 
   async findElectricityUnit(input: FilterRoomWaterUnitAndElectricityUnitDto) {
     try {
+      const dateFilterBefor = dayjs(
+        `${input.year}-${input.month < 9 ? "0" + input.month : input.month}`
+      )
+        .add(-1, "months")
+        .format("YYYY-MM")
+        .split("-");
       const result = await this.prisma.room.findMany({
         include: {
           transactionElectricityUnit: {
             where: {
-              month: input.month,
-              year: input.year,
+              month: { in: [input.month, Number(dateFilterBefor[1])] },
+              year: { in: [input.year, Number(dateFilterBefor[0])] },
             },
+            orderBy: [
+              {
+                month: "desc",
+              },
+              {
+                year: "desc",
+              },
+            ],
           },
         },
         orderBy: {
@@ -484,23 +579,32 @@ export class RoomService {
         },
       });
       return result.map((el) => {
-        const transactionElectricityUnit = el.transactionElectricityUnit[0];
+        let unitBefor = 0;
+        let unitAfter = 0;
+        if (el.transactionElectricityUnit.length === 2) {
+          unitBefor = el.transactionElectricityUnit[1]?.unitAfter;
+          unitAfter = el.transactionElectricityUnit[0]?.unitAfter;
+        } else {
+          unitBefor =
+            el.transactionElectricityUnit[0] &&
+            el.transactionElectricityUnit[0]?.month !== input.month
+              ? el.transactionElectricityUnit[0]?.unitAfter
+              : 0;
+          unitAfter =
+            el.transactionElectricityUnit[0] &&
+            el.transactionElectricityUnit[0]?.month === input.month
+              ? el.transactionElectricityUnit[0]?.unitAfter
+              : 0;
+        }
         return {
+          id: el.id,
           nameRoom: el.nameRoom,
           status: el.status,
           type: el.type,
-          month: transactionElectricityUnit
-            ? transactionElectricityUnit.month
-            : null,
-          year: transactionElectricityUnit
-            ? transactionElectricityUnit.year
-            : null,
-          unitBefor: transactionElectricityUnit
-            ? transactionElectricityUnit.unitBefor
-            : 0,
-          unitAfter: transactionElectricityUnit
-            ? transactionElectricityUnit.unitAfter
-            : 0,
+          month: input.month,
+          year: input.year,
+          unitBefor: unitBefor,
+          unitAfter: unitAfter,
         };
       });
     } catch (error) {

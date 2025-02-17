@@ -72,7 +72,7 @@ export class RoomController {
   }
 
   @Post("update/electricityunit")
-  updateRoomElectricityUnit(
+  updateElectricityUnit(
     @Body() input: UpdateRoomWaterUnitAndElectricityUnitDto[]
   ) {
     return this.roomService.updateWaterUnitAndElectricityUnit(

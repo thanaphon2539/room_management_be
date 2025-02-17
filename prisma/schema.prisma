@@ -76,11 +76,12 @@ model room {
 }
 
 model roomContact {
-  id      Int    @id @default(autoincrement())
-  name    String
-  phone   String
-  idCard  String
-  address String
+  id           Int    @id @default(autoincrement())
+  name         String
+  phone        String
+  idCard       String
+  address      String
+  licensePlate String?
 
   room      room?    @relation(fields: [roomId], references: [id], onDelete: Cascade)
   roomId    Int?     @unique // ต้องเป็น @unique เพื่อให้แต่ละ Room มีแค่ 1 roomContact

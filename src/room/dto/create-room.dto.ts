@@ -5,6 +5,7 @@ export class ContactDto {
   phone: string;
   idCard: string;
   address: string;
+  licensePlate: string;
 }
 
 export class CompanyDto {
