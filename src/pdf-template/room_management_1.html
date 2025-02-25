@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Template for Backend</title>
+  <style lang="scss">
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+    }
+
+    .invoice {
+      padding: 20px;
+      margin: 20px;
+    }
+
+    .header {
+      text-align: end;
+      margin-bottom: 20px;
+    }
+
+    .box-info {
+      display: flex;
+      justify-content: space-between;
+
+      .info {
+        margin-bottom: 20px;
+      }
+
+      .right {
+        text-align: end;
+      }
+
+      p {
+        margin: 5px 0;
+      }
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 0.9em;
+      color: #888;
+    }
+
+    .table-invoice {
+      border-bottom: 1px solid black;
+
+      th {
+        border-top: 1px solid black;
+        border-bottom: 1px solid black;
+      }
+
+      td {
+        align-content: start;
+      }
+
+      td:nth-child(1),
+      td:nth-child(2),
+      td:nth-child(4),
+      td:nth-child(5) {
+        text-align: center;
+      }
+
+      td:nth-child(6),
+      th:nth-child(6) {
+        text-align: right;
+      }
+    }
+
+    .table-invoice-footer {
+      td {
+        align-content: start;
+      }
+      td:nth-child(1),
+      td:nth-child(2) {
+        text-align: left;
+      }
+
+      td:nth-child(3) {
+        text-align: right;
+      }
+    }
+    .signature {
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="invoice">
+    <div class="header">
+      <h3>ใบแจ้งหนี้ (Invoice)</h3>
+    </div>
+
+    <div class="box-info">
+      <div class="info">
+        <p><strong>{{company_name}}</strong></p>
+        <p> {{company_adress}}</p>
+        <p>เลขปรระจำตัวผู้เสียภาษี {{tex_id}} {{company_branch}}</p>
+        <p>โทร. {{compapyp_hone}} / อีเมล. {{company_email}}</p>
+        <p><strong>ลูกค้า(Customer)</strong></p>
+        <p>{{customer_name}}</p>
+      </div>
+      <div class="info right">
+        <p><strong>ต้นฉบับ (Original)</strong></p>
+        <p>เลขที่(ID) {{invoice_id}}</p>
+        <p>วันที่(Date) {{invoice_date}}</p>
+        <p>ห้อง(Room) {{invoice_room}}</p>
+        <p>พนักงาน(Staff) {{invoice_staff}}</p>
+      </div>
+    </div>
+
+    <table class="table-invoice" width="100%" cellspacing="0" cellpadding="5">
+      <thead>
+        <tr>
+          <th>ลำดับ(#)</th>
+          <th>V/N*</th>
+          <th>รายการ (Description)</th>
+          <th>จำนวนเงิน (Amount)</th>
+          <th>ภาษี (VAT)</th>
+          <th>รวมเงิน (Total)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>N</td>
+          <td>ค่าเช่าห้อง (Room Rate) A109 เดือน 2/2025</td>
+          <td>2,000.00</td>
+          <td>0.00</td>
+          <td>2,000.00</td>
+        </tr>
+        {{items}}
+      </tbody>
+    </table>
+    <table class="table-invoice-footer" width="100%" cellspacing="0" cellpadding="5">
+      <tbody>
+        <tr>
+          <td>* V = ภาษี / N = ยกเว้นภาษี</td>
+          <td><strong>มูลค่าที่ยกเว้นภาษีมูลค่าเพิ่ม (NON-VAT Items)</strong></td>
+          <td>{{non_vat_item_amount}}</td>
+        </tr>
+        <tr>
+          <td>* V = VAT Items / N = NOT-VAT Items</td>
+          <td><strong>มูลค่าสินค้าที่เสียภาษีมูลค่าเพิ่ม (VAT Items)</strong></td>
+          <td>{{vat_item_amount}}</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><strong>ภาษีมูลค่าเพิ่ม {{vat_amount_percent}} (VAT amount)</strong></td>
+          <td>{{vat_item_amount}}</td>
+        </tr>
+        <tr>
+          <td>({thai_amount}})</td>
+          <td style="border-bottom: 1px solid black;"><strong>ยอดเงินสุทธิ (Total Payment Due)</strong></td>
+          <td style="border-bottom: 1px solid black;">{{total_payment_amount}}</td>
+        </tr>
+
+      </tbody>
+    </table>
+
+    <div class="info">
+      <p><strong>หมายเหตุ(Note) </strong>{{note}}</p>
+    </div>
+
+    <div class="signature">
+      <p>ลงชื่อ ......................................... ผู้วางบิล</p>
+      <p>(.........................................)</p>
+    </div>
+
+    <p><strong>ข้อมูลการชำระเงิน</strong></p>
+    <div class="box-info" style="max-width:40%;">
+      <div class="info">
+        <p>ชื่อธนาคาร </p>
+        <p>ชื่อบัญชี </p>
+        <p>หมายเลขบัญชี </p>
+      </div>
+      <div class="info">
+        <p> {{account_name}}</p>
+        <p> {{bank_name}}</p>
+        <p> {{account_number}}</p>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

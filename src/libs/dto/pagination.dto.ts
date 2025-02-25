@@ -4,5 +4,5 @@ export class PageOptionsDto {
   @Transform(({ value }) => Number(value))
   page: number = 1;
   @Transform(({ value }) => Number(value))
-  limit: number = 30;
+  limit: number;
 }

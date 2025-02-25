@@ -45,6 +45,7 @@ model settingContactAddress {
   email   String @default("")
   address String @default("")
   company String @default("")
+  idTax   String @default("")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
@@ -63,30 +64,31 @@ model room {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
 
-  roomContact                roomContact?
-  roomContactId              Int?                         @unique
-  roomCompany                roomCompany?
-  roomCompanyId              Int?                         @unique
+  roomContact                roomContact?                 @relation(fields: [roomContactId], references: [id])
+  roomContactId              Int?
+  roomCompany                roomCompany?                 @relation(fields: [roomCompanyId], references: [id])
+  roomCompanyId              Int?
   rent                       rent[]
   serviceFee                 serviceFee[]
   transactionWaterUnit       transactionWaterUnit[]
   transactionElectricityUnit transactionElectricityUnit[]
+  transactionBill            transactionBill[]
 
+  @@index([nameRoom, type, status])
   @@map("Room")
 }
 
 model roomContact {
-  id           Int    @id @default(autoincrement())
+  id           Int     @id @default(autoincrement())
   name         String
   phone        String
   idCard       String
   address      String
   licensePlate String?
 
-  room      room?    @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  roomId    Int?     @unique // ต้องเป็น @unique เพื่อให้แต่ละ Room มีแค่ 1 roomContact
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
+  room      room[]
 
   @@map("RoomContact")
 }
@@ -98,10 +100,9 @@ model roomCompany {
   idTax   String
   address String
 
-  room      room?    @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  roomId    Int?     @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
+  room      room[]
 
   @@map("RoomCompany")
 }
@@ -141,6 +142,9 @@ model transactionWaterUnit {
   unitBefor Int
   unitAfter Int
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
   @@map("TransactionWaterUnit")
 }
 
@@ -153,7 +157,32 @@ model transactionElectricityUnit {
   unitBefor Int
   unitAfter Int
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
   @@map("TransactionElectricityUnit")
+}
+
+model transactionBill {
+  id        Int        @id @default(autoincrement())
+  roomId    Int
+  room      room       @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  month     Int
+  year      Int
+  itemNoVat String
+  itemVat   String
+  vat3      String
+  vat5      String
+  vat7      String
+  total     String
+  status    statusBill
+  number    String
+  type      typeBill
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@map("TransactionBill")
 }
 
 enum typeRoom {
@@ -170,4 +199,15 @@ enum statusRoom {
 enum typeRoomWaterAndElectricity {
   waterUnit
   electricityUnit
+}
+
+enum statusBill {
+  waiting
+  succuess
+  fail
+}
+
+enum typeBill {
+  invoice
+  receipt
 }

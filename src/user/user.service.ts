@@ -57,7 +57,11 @@ export class UserService {
       const count = await this.prisma.user.count({ where: filter });
       const result = await this.prisma.user.findMany({
         where: filter,
-        skip: input.showDataAll ? 0 : (input.page - 1) * input.limit,
+        skip: input.showDataAll
+          ? 0
+          : input.limit
+          ? (input.page - 1) * input.limit
+          : 0,
         take: input.limit,
         select: {
           id: true,

@@ -6,9 +6,19 @@ import { AuthModule } from "./auth/auth.module";
 import { SettingModule } from "./setting/setting.module";
 import { RoomModule } from "./room/room.module";
 import { AppController } from "./app.controller";
+import { BillModule } from "./bill/bill.module";
+import { ScheduleModule } from "@nestjs/schedule";
 
 @Module({
-  imports: [PrismaModule, UserModule, AuthModule, SettingModule, RoomModule],
+  imports: [
+    ScheduleModule.forRoot(),
+    PrismaModule,
+    UserModule,
+    AuthModule,
+    SettingModule,
+    RoomModule,
+    BillModule,
+  ],
   providers: [AppService],
   exports: [AppService],
   controllers: [AppController],

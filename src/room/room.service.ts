@@ -86,29 +86,55 @@ export class RoomService {
           let contactId: number | null = null; // แก้ให้สามารถเป็น null ได้
           let companyId: number | null = null; // แก้ให้สามารถเป็น null ได้
           if (input.contact) {
-            const createdContact = await this.prisma.roomContact.create({
-              data: {
-                name: input.contact?.name,
-                phone: input.contact?.phone,
-                idCard: input.contact?.idCard,
-                address: input.contact?.address,
-                roomId: result.id, // เชื่อมกับ Room
-                licensePlate: input.contact?.licensePlate,
-              },
-            });
-            contactId = createdContact.id; // ไม่ error แล้ว
+            let name = false;
+            if (input.contact?.name) {
+              const checkName = await this.prisma.roomContact.findFirst({
+                where: {
+                  name: input.contact.name.trim(),
+                },
+              });
+              if (checkName) {
+                contactId = checkName.id;
+                name = true;
+              }
+            }
+            if (!name) {
+              const createdContact = await this.prisma.roomContact.create({
+                data: {
+                  name: input.contact?.name?.trim(),
+                  phone: input.contact?.phone,
+                  idCard: input.contact?.idCard,
+                  address: input.contact?.address,
+                  licensePlate: input.contact?.licensePlate,
+                },
+              });
+              contactId = createdContact.id; // ไม่ error แล้ว
+            }
           }
           if (input.company) {
-            const createdCompany = await this.prisma.roomCompany.create({
-              data: {
-                name: input.company?.name,
-                phone: input.company?.phone,
-                idTax: input.company?.idTax,
-                address: input.company?.address,
-                roomId: result.id,
-              },
-            });
-            companyId = createdCompany.id;
+            let name = false;
+            if (input.company?.name) {
+              const checkName = await this.prisma.roomCompany.findFirst({
+                where: {
+                  name: input.company.name.trim(),
+                },
+              });
+              if (checkName) {
+                companyId = checkName.id;
+                name = true;
+              }
+            }
+            if (!name) {
+              const createdCompany = await this.prisma.roomCompany.create({
+                data: {
+                  name: input.company?.name?.trim(),
+                  phone: input.company?.phone,
+                  idTax: input.company?.idTax,
+                  address: input.company?.address,
+                },
+              });
+              companyId = createdCompany.id;
+            }
           }
           if (contactId || companyId) {
             await this.prisma.room.update({
@@ -132,7 +158,21 @@ export class RoomService {
   async findAll(input: FilterRoomDto) {
     try {
       const filter: Prisma.roomWhereInput = {
-        nameRoom: { contains: input.keyword, mode: "insensitive" },
+        OR: [
+          {
+            nameRoom: { contains: input.keyword, mode: "insensitive" },
+          },
+          {
+            roomContact: {
+              name: { contains: input.keyword, mode: "insensitive" },
+            },
+          },
+          {
+            roomCompany: {
+              name: { contains: input.keyword, mode: "insensitive" },
+            },
+          },
+        ],
       };
       const count = await this.prisma.room.count({ where: filter });
       const result = await this.prisma.room.findMany({
@@ -140,37 +180,39 @@ export class RoomService {
         include: {
           roomCompany: true,
           roomContact: true,
-          rent: true,
-          serviceFee: true,
+          rent: {
+            orderBy: {
+              id: "asc",
+            },
+          },
+          serviceFee: {
+            orderBy: {
+              id: "asc",
+            },
+          },
         },
         orderBy: {
           nameRoom: "asc",
         },
-        skip: input.showDataAll ? 0 : (input.page - 1) * input.limit,
+        skip: input.showDataAll
+          ? 0
+          : input.limit
+          ? (input.page - 1) * input.limit
+          : 0,
         take: input.limit,
       });
       return wrapMeta(
         result.map((el) => {
+          const rentTotal =
+            el?.rent?.length > 0 ? _.sum(el.rent.map((rent) => rent.price)) : 0;
+          const serviceFeeTotal =
+            el?.serviceFee?.length > 0
+              ? _.sum(el.serviceFee.map((serviceFee) => serviceFee.price))
+              : 0;
           return {
             ...el,
-            rent:
-              el?.rent?.length > 0
-                ? el.rent.map((rent) => {
-                    return {
-                      ...rent,
-                      total: _.sum(el.rent.map((sum) => sum?.price)),
-                    };
-                  })
-                : [],
-            serviceFee:
-              el?.serviceFee?.length > 0
-                ? el.serviceFee.map((serviceFee) => {
-                    return {
-                      ...serviceFee,
-                      total: _.sum(el.serviceFee.map((sum) => sum?.price)),
-                    };
-                  })
-                : [],
+            rentTotal: rentTotal,
+            serviceFeeTotal: serviceFeeTotal,
           };
         }),
         count,
@@ -211,6 +253,7 @@ export class RoomService {
 
   async updateRoom(id: number, input: UpdateRoomDto) {
     try {
+      console.log("input >>>", input);
       const checkRoom = await this.prisma.room.findUnique({
         where: { id },
         include: {
@@ -230,7 +273,7 @@ export class RoomService {
       if (input.contact) {
         if (input.contact.id) {
           const checkRoomContact = await this.prisma.roomContact.findFirst({
-            where: { id: input.contact.id, roomId: id },
+            where: { id: input.contact.id },
           });
           if (!checkRoomContact) {
             throw new HttpException(
@@ -244,7 +287,7 @@ export class RoomService {
                 id: checkRoomContact.id,
               },
               data: {
-                name: input.contact?.name,
+                name: input.contact?.name?.trim(),
                 phone: input.contact?.phone,
                 idCard: input.contact?.idCard,
                 address: input.contact?.address,
@@ -254,24 +297,37 @@ export class RoomService {
             })
           ).id;
         } else {
-          roomContactId = (
-            await this.prisma.roomContact.create({
-              data: {
-                roomId: id,
-                name: input.contact?.name,
-                phone: input.contact?.phone,
-                idCard: input.contact?.idCard,
-                address: input.contact?.address,
-                licensePlate: input.contact?.licensePlate,
+          let name = false;
+          if (input.contact?.name) {
+            const checkName = await this.prisma.roomContact.findFirst({
+              where: {
+                name: input.contact.name.trim(),
               },
-            })
-          ).id;
+            });
+            if (checkName) {
+              roomContactId = checkName.id;
+              name = true;
+            }
+          }
+          if (!name) {
+            roomContactId = (
+              await this.prisma.roomContact.create({
+                data: {
+                  name: input.contact?.name,
+                  phone: input.contact?.phone,
+                  idCard: input.contact?.idCard,
+                  address: input.contact?.address,
+                  licensePlate: input.contact?.licensePlate,
+                },
+              })
+            ).id;
+          }
         }
       }
       if (input.company) {
         if (input.company.id) {
           const checkRoomCompany = await this.prisma.roomCompany.findFirst({
-            where: { id: input.company.id, roomId: id },
+            where: { id: input.company.id },
           });
           if (!checkRoomCompany) {
             throw new HttpException(
@@ -285,7 +341,7 @@ export class RoomService {
                 id: checkRoomCompany.id,
               },
               data: {
-                name: input.company?.name,
+                name: input.company?.name?.trim(),
                 phone: input.company?.phone,
                 idTax: input.company?.idTax,
                 address: input.company?.address,
@@ -294,17 +350,30 @@ export class RoomService {
             })
           ).id;
         } else {
-          roomCompanyId = (
-            await this.prisma.roomCompany.create({
-              data: {
-                roomId: id,
-                name: input.company?.name,
-                phone: input.company?.phone,
-                idTax: input.company?.idTax,
-                address: input.company?.address,
+          let name = false;
+          if (input.company?.name) {
+            const checkName = await this.prisma.roomCompany.findFirst({
+              where: {
+                name: input.company.name.trim(),
               },
-            })
-          ).id;
+            });
+            if (checkName) {
+              roomCompanyId = checkName.id;
+              name = true;
+            }
+          }
+          if (!name) {
+            roomCompanyId = (
+              await this.prisma.roomCompany.create({
+                data: {
+                  name: input.company?.name,
+                  phone: input.company?.phone,
+                  idTax: input.company?.idTax,
+                  address: input.company?.address,
+                },
+              })
+            ).id;
+          }
         }
       }
       if (input.rent.length > 0) {
@@ -346,7 +415,7 @@ export class RoomService {
         }
       }
       if (input.serviceFee.length > 0) {
-        const result = checkRoom.rent
+        const result = checkRoom.serviceFee
           .map((el) => el.id)
           .reduce((acc, x) => {
             if (!input.serviceFee.map((el) => el.id).includes(x)) {
@@ -361,16 +430,26 @@ export class RoomService {
           },
         });
         for (const serviceFee of input.serviceFee) {
-          await this.prisma.serviceFee.update({
-            where: {
-              id: serviceFee.id,
-              roomId: id,
-            },
-            data: {
-              name: serviceFee.name,
-              price: serviceFee.price,
-            },
-          });
+          if (!serviceFee?.id) {
+            await this.prisma.serviceFee.create({
+              data: {
+                roomId: id,
+                name: serviceFee.name,
+                price: serviceFee.price,
+              },
+            });
+          } else {
+            await this.prisma.serviceFee.update({
+              where: {
+                id: serviceFee.id,
+                roomId: id,
+              },
+              data: {
+                name: serviceFee.name,
+                price: serviceFee.price,
+              },
+            });
+          }
         }
       }
       if (input.type !== checkRoom.type) {
@@ -448,7 +527,11 @@ export class RoomService {
           where: { id: room.roomId },
         });
         if (checkroom) {
-          if (room.unitAfter <= room.unitBefor && room.unitBefor !== 0) {
+          if (
+            room.unitAfter <= room.unitBefor &&
+            room.unitBefor !== 0 &&
+            room.unitAfter !== 0
+          ) {
             throw new HttpException(
               `ค่าของเดือนก่อนหน้าห้ามมีค่น้อยกว่าหรือเท่ากับเดือนปัจจุบัน`,
               HttpStatus.BAD_REQUEST

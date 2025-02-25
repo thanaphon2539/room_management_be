@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Template for Backend</title>
+  <style lang="scss">
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+    }
+
+    h3 {
+      margin: 0px;
+    }
+
+    h2 {
+      margin-top: 0px;
+    }
+
+    p {
+      margin: 0px;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    td {
+      align-content: start;
+      padding: 4px;
+    }
+
+    .text-end {
+      text-align: end;
+    }
+
+    .bg {
+      background-color: #c7e1b8;
+    }
+
+    .border-l {
+      border-left: 2px solid black;
+    }
+
+    .border-r {
+      border-right: 2px solid black;
+    }
+
+    .border-b {
+      border-bottom: 2px solid black;
+    }
+
+    .border-t {
+      border-top: 2px solid black;
+    }
+  </style>
+</head>
+
+<body>
+  <div>
+    <table class="table-invoice" width="100%" cellspacing="0">
+      <tr class="bg">
+        <td colspan="6" class="border-t border-l border-r">
+          <div>
+            <h3>{{company_name}} {{company_branch}}</h3>
+            <p>{{company_adress}}</p>
+            <p>เลขประจำตัวผู้เสียภาษี: {{tex_id}} เบอร์ติดต่อ: {{company_phone}}</p>
+          </div>
+        </td>
+        <td colspan="3" class="border-t border-r">
+          <div class="text-center">
+            <h2>ใบแจ้งหนี้ (Invoice)</h2>
+            <p><strong>ต้นฉบับ (Original)</strong></p>
+          </div>
+        </td>
+      </tr>
+
+      <tr>
+        <td colspan="6" class="border-t border-l border-r">
+          <div>
+            <br>
+            <p><strong>ชื่อลูกค้า:</strong> {{customer_name}}</p>
+            <p><strong>ที่อยู่ลูกค้า:</strong> {{customer_adress}} เลขประจำตัวผู้เสียภาษี: {{customer_tex_id}}</p>
+          </div>
+        </td>
+        <td colspan="3" class="border-t border-r">
+          <div>
+            <br>
+            <p><strong>เลขที่:</strong> {{invoice_id}}</p>
+            <p><strong>วันที่:</strong> {{date}}</p>
+            <p><strong>เดือน:</strong> {{month}}</p>
+            <p><strong>กำหนดชำระ:</strong> {{due_date}}</p>
+            <br>
+          </div>
+        </td>
+      </tr>
+
+      <tr class="bg text-center">
+        <td colspan="1" class="border-t border-l border-r border-t border-b">ลำดับ</td>
+        <td colspan="1" class="border-t border-r border-t border-b">V/N*</td>
+        <td colspan="4" class="border-t border-r border-t border-b">รายการ</td>
+        <td class="border-t border-r border-t border-b">จำนวน</td>
+        <td class="border-t border-r border-t border-b">ราคา/หน่วย</td>
+        <td class="border-t border-r border-t border-b">รวม</td>
+      </tr>
+
+      <tr>
+        <td colspan="1" class="border-l border-r text-center">1</td>
+        <td colspan="1" class="border-r text-center">N</td>
+        <td colspan="4" class="border-r">ค่าเช่าห้อง (12/2567)</td>
+        <td class="border-r text-center">28</td>
+        <td class="border-r text-center">2000</td>
+        <td class="border-r text-end">56,000.00</td>
+      </tr>
+      <tr>
+        <td colspan="1" class="border-l border-r text-center">1</td>
+        <td colspan="1" class="border-r text-center">N</td>
+        <td colspan="4" class="border-r">ค่าเช่าห้อง (12/2567)</td>
+        <td class="border-r text-center">28</td>
+        <td class="border-r text-center">2000</td>
+        <td class="border-r text-end">56,000.00</td>
+      </tr>
+
+      {{items}}
+
+      <tr height="20px">
+        <td colspan="1" class="border-l border-r"/>
+        <td colspan="1" class="border-r"/>
+        <td colspan="4" class="border-r"/>
+        <td class="border-r"/>
+        <td class="border-r"/>
+        <td class="border-r"/>
+      </tr>
+
+      <tr>
+        <td colspan="6" rowspan="2" class="border-t border-l border-r">* V = ภาษี / N = ยกเว้นภาษี * V = VAT Items / N =
+          NOT-VAT Items </td>
+        <td colspan="2" class="border-t border-r text-end">รวมเป็นเงิน</td>
+        <td colspan="1" class="border-t border-r text-end">{{amount-total}}</td>
+      </tr>
+
+      <tr class="text-end">
+        <td colspan="2" class="border-r">ยกเว้นภาษี</td>
+        <td colspan="1" class="border-r">{{not_vat}}</td>
+      </tr>
+
+      <tr>
+        <td colspan="6" rowspan="5" class="border-l border-r">หมายเหตุ: {{note}}</td>
+        <td colspan="2" class="border-r text-end">จำนวนเงินก่อนภาษี </td>
+        <td colspan="1" class="border-r text-end">{{before_vat}}</td>
+      </tr>
+
+      <tr class="text-end">
+        <td colspan="2" class="border-r">VAT {{vat_percent}}</td>
+        <td colspan="1" class="border-r">{{vat_total}}</td>
+      </tr>
+
+      <tr class="text-end">
+        <td colspan="2" class="border-r ">ค่าบริการหัก ณ ที่จ่าย {{vat_service_percent}}</td>
+        <td colspan="1" class="border-r">{{vat_service}}</td>
+      </tr>
+
+      <tr class="text-end">
+        <td colspan="2" class="border-r">ค่าเช่าหัก ณ ที่จ่าย {{rent_source_percent}}</td>
+        <td colspan="1" class="border-r">{{rent_source}}</td>
+      </tr>
+
+      <tr class="text-end">
+        <td colspan="2" class="border-r">รวมหัก ณ ที่จ่าย</td>
+        <td colspan="1" class="border-r">{{withheld_source}}</td>
+      </tr>
+
+      <tr>
+        <td colspan="6" class="border-l border-r">ตัวอักษร: {{thai_amount}}</td>
+        <td colspan="2" class="border-r text-end"><strong>รวมเป็นเงินทั้งสิ้น (Total)</strong></td>
+        <td colspan="1" class="border-r text-end"><strong>{{total_amount}}</strong></td>
+      </tr>
+
+      <tr>
+        <td colspan="3" class="border-r border-l border-t"><br><strong>ข้อมูลการชำระเงิน</strong></td>
+        <td colspan="3" rowspan="3" class="border-r border-t"><br><strong>ผู้รับบิล</strong></td>
+        <td colspan="3" rowspan="3" class="border-r border-t"><br><strong>ผู้วางบิลในนามบริษัท {{company_name}}</strong>
+        </td>
+      </tr>
+
+      <tr>
+        <td colspan="3" class="border-l border-r">ชื่อธนาคาร: {{bank_name}}</td>
+      </tr>
+
+      <tr>
+        <td colspan="3" class="border-l border-r">ชื่อบัญชี: {{account_name}}</td>
+      </tr>
+
+      <tr>
+        <td colspan="3" class="border-l border-r ">หมายเลขบัญชี: {{account_number}}</td>
+        <td colspan="3" class=" border-r text-end">วันที่: ____________________</td>
+        <td colspan="3" class=" border-r text-center">วันที่: {{date}} </td>
+      </tr>
+      <tr height="20px">
+        <td colspan="3" width="33%" class="border-l border-r border-b"/>
+        <td colspan="3" width="33%" class=" border-r border-b"/>
+        <td colspan="3" width="33%" class=" border-r border-b"/>
+      </tr>
+
+
+    </table>
+  </div>
+</body>
+
+</html>
