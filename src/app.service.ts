@@ -21,7 +21,8 @@ export class AppService implements OnModuleInit {
   }
 
   /** ทุกๆ 3ชม */
-  @Interval(3 * 60 * 60 * 1000)
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  // @Interval(3 * 60 * 60 * 1000)
   handleInterval() {
     console.log("This task runs every 3 hours");
     /** test path */
@@ -34,7 +35,7 @@ export class AppService implements OnModuleInit {
         const fullPath = `${pathFolder}/${file}`;
         const stat = fs.statSync(fullPath);
         const isOneDayOld = dayjs(stat.ctimeMs).isBefore(
-          dayjs().subtract(3, "hour")
+          dayjs().subtract(5, "minutes")
         );
         if (isOneDayOld) {
           console.log("delete old file", fullPath);

@@ -26,6 +26,7 @@ import { HttpExceptionFilter } from "src/libs/exceptions/http.exception";
 import { HttpInterceptor } from "src/libs/interceptors/http.interceptor";
 import fs from "fs";
 import { Response, Request } from "express";
+import dayjs from "dayjs";
 
 @UseGuards(AuthGuard("jwt"))
 @Controller("bill")
@@ -38,13 +39,28 @@ export class BillController {
   }
 
   @Post("invoice/test")
-  createInvoiceBillTest(
+  async createInvoiceBillTest(
     @Body() input: CreateBillDto,
     @Res() res: Response,
     @Req() req: Request
   ) {
     try {
-      return this.billService.generateInvoicePdf(res);
+      // const { pdfPath, filename } = await this.billService.generateInvoiceDetail();
+      // if (!pdfPath) {
+      //   throw new HttpException(
+      //     {
+      //       message: `ไม่พบข้อมูล pdfpath`,
+      //     },
+      //     HttpStatus.BAD_REQUEST
+      //   );
+      // }
+      // console.log("filename >>>", filename);
+      // res.setHeader("Content-Type", "application/pdf");
+      // res.setHeader(
+      //   "Content-Disposition",
+      //   `attachment; filename=${encodeURIComponent(filename)}`
+      // );
+      // fs.createReadStream(pdfPath).pipe(res);
     } catch (error) {
       this.logger.error("createInvoiceBill error >>>", error);
       throw new HttpException(
@@ -66,6 +82,46 @@ export class BillController {
       const { pdfPath, filename } = await this.billService.createInvoiceBill(
         input,
         req,
+        true,
+        false
+      );
+      if (!pdfPath) {
+        throw new HttpException(
+          {
+            message: `ไม่พบข้อมูล pdfpath`,
+          },
+          HttpStatus.BAD_REQUEST
+        );
+      }
+      console.log("filename >>>", filename);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=${encodeURIComponent(filename)}`
+      );
+      fs.createReadStream(pdfPath).pipe(res);
+    } catch (error) {
+      this.logger.error("createInvoiceBill error >>>", error);
+      throw new HttpException(
+        {
+          message: error?.message,
+        },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+
+  @Post("invoice/detail")
+  async createInvoiceBillDetail(
+    @Body() input: CreateBillDto,
+    @Res() res: Response,
+    @Req() req: Request
+  ) {
+    try {
+      const { pdfPath, filename } = await this.billService.createInvoiceBill(
+        input,
+        req,
+        true,
         true
       );
       if (!pdfPath) {
@@ -104,7 +160,8 @@ export class BillController {
       const { pdfPath, filename } = await this.billService.createInvoiceBill(
         input,
         req,
-        false
+        false,
+        true
       );
       if (!pdfPath) {
         throw new HttpException(

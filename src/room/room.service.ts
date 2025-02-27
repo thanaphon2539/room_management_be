@@ -528,7 +528,7 @@ export class RoomService {
         });
         if (checkroom) {
           if (
-            room.unitAfter <= room.unitBefor &&
+            room.unitAfter < room.unitBefor &&
             room.unitBefor !== 0 &&
             room.unitAfter !== 0
           ) {

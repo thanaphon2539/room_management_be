@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Template for Backend</title>
+  <style lang="scss">
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      padding: 0 10px;
+      font-weight: 300;
+    }
+
+    .box-info {
+      display: flex;
+      justify-content: space-between;
+
+      .info {
+        margin-bottom: 20px;
+      }
+
+      .flex-1 {
+        flex: 1;
+      }
+
+      .right {
+        text-align: end;
+      }
+
+      .center {
+        text-align: center;
+      }
+
+      p {
+        margin: 5px 0;
+      }
+    }
+
+    .table-bill {
+      border-left: 1px solid black;
+      border-top: 1px solid black;
+
+      td {
+        border-right: 1px solid black;
+        border-bottom: 1px solid black;
+        text-align: center;
+      }
+    }
+
+    .table-invoice {
+      border-left: 1px solid black;
+      border-top: 1px solid black;
+      font-size: 12px;
+
+      th {
+        border-right: 1px solid black;
+        border-bottom: 1px solid black;
+        align-content: center;
+        background-color: whitesmoke;
+        font-weight: 500;
+      }
+
+      td {
+        border-right: 1px solid black;
+        border-bottom: 1px solid black;
+        text-align: center;
+      }
+
+      td:nth-child(7),
+      td:nth-child(8),
+      td:nth-child(9),
+      td:nth-child(10) {
+        background-color: antiquewhite;
+      }
+
+      td:nth-child(11),
+      td:nth-child(12),
+      td:nth-child(13),
+      td:nth-child(14) {
+        background-color: lightblue;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div>
+    <div class="box-info">
+      <div class="info center flex-1">
+        <strong>
+          <p>{{company_name}}</p>
+          <p>สถิติ เดือน {{month}}</p>
+          <p>จดหน่วยการใช้น้ำและไฟฟ้า วันที่ {{date}}</p>
+        </strong>
+      </div>
+      <div>
+        <table class="table-bill" cellspacing="0" cellpadding="5">
+          <tbody>
+            <tr>
+              <td>ค่าไฟฟ้า (Electricity)</td>
+              <td>{{electricity}}</td>
+            </tr>
+            <tr>
+              <td>ค่าน้ำ (Water)</td>
+              <td>{{water}}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="info right"> (บาท)</div>
+
+      </div>
+    </div>
+
+    <table class="table-invoice" width="100%" cellspacing="0" cellpadding="2">
+      <thead>
+        <tr>
+          <th rowspan="2">NO.</th>
+          <th rowspan="2">Building</th>
+          <th rowspan="2">Room No.</th>
+          <th rowspan="2">Rent</th>
+          <th rowspan="2">Service</th>
+          <th rowspan="2">Common Fee</th>
+          <th colspan="4" style="background-color: orange">Electricity ค่าไฟฟ้า</th>
+          <th colspan="4" style="background-color: skyblue;">Water ค่าน้ำ</th>
+          <th rowspan="2">Other Fees</th>
+          <th rowspan="2">Total</th>
+        </tr>
+        <tr>
+          <th style="background-color: antiquewhite;">Meter start</th>
+          <th style="background-color: antiquewhite;">Meter to</th>
+          <th style="background-color: antiquewhite;">Use:unit</th>
+          <th style="background-color: antiquewhite;">Bath</th>
+
+          <th style="background-color: mintcream;">Meter start</th>
+          <th style="background-color: mintcream;">Meter to</th>
+          <th style="background-color: mintcream;">PSC-INV-</th>
+          <th style="background-color: mintcream;">Bath</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>C</td>
+          <td>106</td>
+          <td>2000</td>
+          <td>2100</td>
+          <td>300</td>
+          <td>10723</td>
+          <td>10943</td>
+          <td>220</td>
+          <td>1760</td>
+          <td>232</td>
+          <td>237</td>
+          <td>5</td>
+          <td>150</td>
+          <td>0</td>
+          <td>6310.00</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+
+</html>

@@ -10,9 +10,11 @@ import path from "path";
 import puppeteer from "puppeteer";
 import fs from "fs";
 import {
+  templateDetailInvoices,
   templateInvoice,
   templateInvoices,
   templateReceipt,
+  templateReceipts,
 } from "src/pdf-template/template";
 import {
   ExpenseItems,
@@ -22,7 +24,6 @@ import {
   ResponseReceiptBill,
 } from "./entities/bill.entity";
 import { Request, Response } from "express";
-import PDFDocument from "pdfkit";
 
 @Injectable()
 export class BillService {
@@ -31,7 +32,12 @@ export class BillService {
     this.logger = new Logger(BillService.name);
   }
 
-  async createInvoiceBill(input: CreateBillDto, req: Request, copy: boolean) {
+  async createInvoiceBill(
+    input: CreateBillDto,
+    req: Request,
+    copy: boolean,
+    detail: boolean
+  ) {
     try {
       const genData = await this.genDataPdf({
         ...input,
@@ -94,6 +100,293 @@ export class BillService {
           ),
           customerName: genData.data[0].room.customerName,
           customerAddress: genData.data[0].room.customerAddress,
+          list: genData.data[0].room.list,
+        },
+        summary: genData.data[0].summary,
+      };
+      let newObjDetail: any = {};
+      if (genData.data.length > 1) {
+        if (detail) {
+          newObjDetail = {
+            ...newObj,
+            room: genData.data.map((el) => {
+              console.log("genData.data >>>", el.room);
+              const rent =
+                _.sum(
+                  el.room.list
+                    .filter((rent) => rent.type === "N")
+                    .map((rent) => parseFloat(rent.price.replace(/,/g, "")))
+                ) || 0;
+              const service =
+                _.sum(
+                  el.room.list
+                    .filter((service) => service.type === "*V")
+                    .map((service) =>
+                      parseFloat(service.price.replace(/,/g, ""))
+                    )
+                ) || 0;
+              const water = el.room.list.find((water) =>
+                water.name.includes("ค่าน้ำ")
+              );
+              const electricity = el.room.list.find((electricity) =>
+                electricity.name.includes("ค่าไฟ")
+              );
+              const waterTotal = water?.price
+                ? parseFloat(water.price.replace(/,/g, ""))
+                : 0;
+              const electricityTotal = electricity?.price
+                ? parseFloat(electricity.price.replace(/,/g, ""))
+                : 0;
+              return {
+                building: el?.nameRoom.slice(0, 1),
+                roomNumber: el?.nameRoom.slice(1),
+                rent: rent,
+                service: service,
+                water: {
+                  befor: water?.unitBefor || 0,
+                  after: water?.unitAfter || 0,
+                  used: water?.qty || 0,
+                  total: waterTotal,
+                },
+                electricity: {
+                  befor: electricity?.unitBefor || 0,
+                  after: electricity?.unitAfter || 0,
+                  used: electricity?.qty || 0,
+                  total: electricity?.price
+                    ? parseFloat(electricity.price.replace(/,/g, ""))
+                    : 0,
+                },
+                total: (
+                  rent +
+                  service +
+                  waterTotal +
+                  electricityTotal
+                ).toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                }),
+              };
+            }),
+          };
+        }
+        newObj["id"] = genData.data.map((el) => el.id);
+        newObj["summary"] = {
+          itemNoVat: 0,
+          itemVat: 0,
+          vat: 0,
+          vat3: 0,
+          vat5: 0,
+          vat7: 0,
+          total: 0,
+          totalNoVat: 0,
+        };
+        let list: any[] = [];
+        for (const value of genData.data) {
+          list.push(
+            ...value.room.list.map((el) => {
+              return {
+                ...el,
+                namePrice:
+                  el.name.includes("ค่าน้ำ") || el.name.includes("ค่าไฟ")
+                    ? el.name
+                    : `${el.name}${el.price}`,
+              };
+            })
+          );
+          const itemNoVat = parseFloat(
+            value.summary.itemNoVat.replace(/,/g, "")
+          );
+          const itemVat = parseFloat(value.summary.itemVat.replace(/,/g, ""));
+          const vat = parseFloat(value.summary.vat.replace(/,/g, ""));
+          const vat3 = parseFloat(value.summary.vat3.replace(/,/g, ""));
+          const vat5 = parseFloat(value.summary.vat5.replace(/,/g, ""));
+          const vat7 = parseFloat(value.summary.vat7.replace(/,/g, ""));
+          const total = parseFloat(value.summary.total.replace(/,/g, ""));
+          newObj["summary"]["itemNoVat"] += itemNoVat;
+          newObj["summary"]["itemVat"] += itemVat;
+          newObj["summary"]["vat"] += vat;
+          newObj["summary"]["vat3"] += vat3;
+          newObj["summary"]["vat5"] += vat5;
+          newObj["summary"]["vat7"] += vat7;
+          newObj["summary"]["total"] += total;
+        }
+        // console.log("list >>>", list);
+        const dataGroupList = _.groupBy(list, "namePrice");
+        const newObjList: any[] = [];
+        for (const key in dataGroupList) {
+          const [data] = dataGroupList[key];
+          newObj["summary"]["totalNoVat"] += _.sum(
+            dataGroupList[key].map((el) =>
+              parseFloat(el.price.replace(/,/g, ""))
+            )
+          );
+          let unitPrice = dataGroupList[key][0]["price"];
+          if (data.name.includes("ค่าน้ำ") || data.name.includes("ค่าไฟ")) {
+            unitPrice = data?.unitPrice;
+          }
+          newObjList.push({
+            type: data.type,
+            name: data.name,
+            qty: _.sum(
+              dataGroupList[key].map((el) =>
+                parseFloat(el.qty.replace(/,/g, ""))
+              )
+            ),
+            unitPrice: unitPrice,
+            price: _.sum(
+              dataGroupList[key].map((el) =>
+                parseFloat(el.price.replace(/,/g, ""))
+              )
+            ).toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+            }),
+          });
+        }
+        newObj["room"]["list"] = _.orderBy(newObjList, "sort", "asc");
+        newObj["summary"]["totalBeforVat"] = (
+          newObj["summary"]["totalNoVat"] - newObj["summary"]["itemNoVat"]
+        ).toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+        });
+        newObj["summary"]["itemNoVat"] = newObj["summary"][
+          "itemNoVat"
+        ].toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+        });
+        newObj["summary"]["itemVat"] = newObj["summary"][
+          "itemVat"
+        ].toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+        });
+        newObj["summary"]["vat"] = newObj["summary"]["vat"].toLocaleString(
+          "en-US",
+          {
+            minimumFractionDigits: 2,
+          }
+        );
+        newObj["summary"]["vat3"] = newObj["summary"]["vat3"].toLocaleString(
+          "en-US",
+          {
+            minimumFractionDigits: 2,
+          }
+        );
+        newObj["summary"]["vat5"] = newObj["summary"]["vat5"].toLocaleString(
+          "en-US",
+          {
+            minimumFractionDigits: 2,
+          }
+        );
+        newObj["summary"]["vat7"] = newObj["summary"]["vat7"].toLocaleString(
+          "en-US",
+          {
+            minimumFractionDigits: 2,
+          }
+        );
+        newObj["summary"]["total"] = newObj["summary"]["total"].toLocaleString(
+          "en-US",
+          {
+            minimumFractionDigits: 2,
+          }
+        );
+        newObj["summary"]["totalNoVat"] = newObj["summary"][
+          "totalNoVat"
+        ].toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+        });
+        // console.log("newObj >>>", newObj);
+        return this.generateCombinedInvoice(input, req, newObj, newObjDetail);
+      } else {
+        return this.generateInvoice(input, req, newObj, copy);
+      }
+    } catch (error) {
+      this.logger.error("createInvoiceBill error >>>", error);
+      throw new HttpException(
+        {
+          message: error?.message,
+        },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+
+  async createReceiptBill(input: CreateBillDto, req: Request, copy: boolean) {
+    try {
+      const genData = await this.genDataPdf({
+        ...input,
+        typeBill: typeBill.receipt,
+      });
+      for (const value of genData.data) {
+        const checkINV = await this.prisma.transactionBill.findFirst({
+          where: {
+            roomId: value.id,
+            year: input.year,
+            month: input.month,
+            type: typeBill.invoice,
+          },
+        });
+        if (checkINV) {
+          await this.prisma.transactionBill.update({
+            where: {
+              id: checkINV.id,
+            },
+            data: {
+              status: statusBill.succuess,
+            },
+          });
+        }
+        const checkRC = await this.prisma.transactionBill.findFirst({
+          where: {
+            roomId: value.id,
+            year: input.year,
+            month: input.month,
+            type: typeBill.receipt,
+          },
+        });
+        if (checkRC) {
+          await this.prisma.transactionBill.update({
+            where: { id: checkRC.id },
+            data: {
+              number: value.numberBill,
+              roomId: value.id,
+              year: input.year,
+              month: input.month,
+              itemNoVat: value.summary.itemNoVat,
+              itemVat: value.summary.itemVat,
+              vat3: value.summary.vat3,
+              vat5: value.summary.vat5,
+              vat7: value.summary.vat7,
+              total: value.summary.total,
+              status: statusBill.succuess,
+              type: typeBill.receipt,
+            },
+          });
+        } else {
+          await this.prisma.transactionBill.create({
+            data: {
+              number: value.numberBill,
+              roomId: value.id,
+              year: input.year,
+              month: input.month,
+              itemNoVat: value.summary.itemNoVat,
+              itemVat: value.summary.itemVat,
+              vat3: value.summary.vat3,
+              vat5: value.summary.vat5,
+              vat7: value.summary.vat7,
+              total: value.summary.total,
+              status: statusBill.succuess,
+              type: typeBill.receipt,
+            },
+          });
+        }
+      }
+      const newObj = {
+        id: genData.data[0].id,
+        numberBill: genData.numberBill,
+        company: genData.company,
+        room: {
+          nameRoom: _.uniq(genData.data.map((el) => el.room.nameRoom)).join(
+            ","
+          ),
+          customerName: genData.data[0].room.customerName,
           list: genData.data[0].room.list,
         },
         summary: genData.data[0].summary,
@@ -213,106 +506,10 @@ export class BillService {
           minimumFractionDigits: 2,
         });
         console.log("newObj >>>", newObj);
-        return this.generateInvoice(input, req, newObj, copy);
+        return this.generateReceipt(input, req, newObj, copy);
       } else {
-        return this.generateInvoice(input, req, newObj, copy);
+        return this.generateReceipt(input, req, newObj, copy);
       }
-    } catch (error) {
-      this.logger.error("createInvoiceBill error >>>", error);
-      throw new HttpException(
-        {
-          message: error?.message,
-        },
-        HttpStatus.BAD_REQUEST
-      );
-    }
-  }
-
-  async createReceiptBill(input: CreateBillDto, req: Request, copy: boolean) {
-    try {
-      const genData = await this.genDataPdf({
-        ...input,
-        typeBill: typeBill.receipt,
-      });
-      for (const value of genData.data) {
-        const checkINV = await this.prisma.transactionBill.findFirst({
-          where: {
-            roomId: value.id,
-            year: input.year,
-            month: input.month,
-            type: typeBill.invoice,
-          },
-        });
-        if (checkINV) {
-          await this.prisma.transactionBill.update({
-            where: {
-              id: checkINV.id,
-            },
-            data: {
-              status: statusBill.succuess,
-            },
-          });
-        }
-        const checkRC = await this.prisma.transactionBill.findFirst({
-          where: {
-            roomId: value.id,
-            year: input.year,
-            month: input.month,
-            type: typeBill.receipt,
-          },
-        });
-        if (checkRC) {
-          await this.prisma.transactionBill.update({
-            where: { id: checkRC.id },
-            data: {
-              number: value.numberBill,
-              roomId: value.id,
-              year: input.year,
-              month: input.month,
-              itemNoVat: value.summary.itemNoVat,
-              itemVat: value.summary.itemVat,
-              vat3: value.summary.vat3,
-              vat5: value.summary.vat5,
-              vat7: value.summary.vat7,
-              total: value.summary.total,
-              status: statusBill.succuess,
-              type: typeBill.receipt,
-            },
-          });
-        } else {
-          await this.prisma.transactionBill.create({
-            data: {
-              number: value.numberBill,
-              roomId: value.id,
-              year: input.year,
-              month: input.month,
-              itemNoVat: value.summary.itemNoVat,
-              itemVat: value.summary.itemVat,
-              vat3: value.summary.vat3,
-              vat5: value.summary.vat5,
-              vat7: value.summary.vat7,
-              total: value.summary.total,
-              status: statusBill.succuess,
-              type: typeBill.receipt,
-            },
-          });
-        }
-      }
-      const newObj = {
-        numberBill: genData.numberBill,
-        company: genData.company,
-        room: {
-          nameRoom: _.uniq(genData.data.map((el) => el.room.nameRoom)).join(
-            ","
-          ),
-          customerName: genData.data[0].room.customerName,
-          list: genData.data[0].room.list,
-        },
-        summary: genData.data[0].summary,
-      };
-      if (genData.data.length > 1) {
-      }
-      return this.generateReceipt(input, req, newObj, copy);
     } catch (error) {
       this.logger.error("createReceiptBill error >>>", error);
       throw new HttpException(
@@ -461,12 +658,16 @@ export class BillService {
         newObj["company"] = result.company;
         newObj["data"].push({
           id: result.id,
+          nameRoom: result.nameRoom,
           room: result.room,
           summary: result.summary,
           numberBill: result.numberBill,
         });
       }
-      return newObj;
+      return {
+        ...newObj,
+        data: _.orderBy(newObj["data"], "nameRoom", "asc"),
+      };
     } catch (error) {
       this.logger.error("genDataPdf error >>>", error);
       throw new HttpException(
@@ -505,9 +706,13 @@ export class BillService {
           }
           return res.map((el) => ({
             name: `ค่าน้ำ`,
+            qty: el.unitAfter - el.unitBefor,
+            unitPrice: settingBillUnit?.waterUnit,
             price: settingBillUnit?.waterUnit
               ? (el.unitAfter - el.unitBefor) * settingBillUnit.waterUnit
               : 0,
+            unitBefor: el.unitBefor,
+            unitAfter: el.unitAfter,
           }));
         });
       const transactionElectricityUnit =
@@ -525,10 +730,14 @@ export class BillService {
             }
             return res.map((el) => ({
               name: `ค่าไฟ`,
+              qty: el.unitAfter - el.unitBefor,
+              unitPrice: settingBillUnit?.electricityUnit,
               price: settingBillUnit?.electricityUnit
                 ? (el.unitAfter - el.unitBefor) *
                   settingBillUnit.electricityUnit
                 : 0,
+              unitBefor: el.unitBefor,
+              unitAfter: el.unitAfter,
             }));
           });
       const list = [
@@ -536,24 +745,28 @@ export class BillService {
           return {
             ...el,
             type: "N",
+            sort: 1,
           };
         }),
         ...transactionWaterUnit.map((el) => {
           return {
             ...el,
             type: "V",
+            sort: 2,
           };
         }),
         ...transactionElectricityUnit.map((el) => {
           return {
             ...el,
             type: "V",
+            sort: 3,
           };
         }),
         ...room.serviceFee.map((el) => {
           return {
             ...el,
             type: "*V",
+            sort: 4,
           };
         }),
       ];
@@ -590,17 +803,27 @@ export class BillService {
           }
         }
         if (el && el.name) {
-          const name =
-            el.name.includes("ค่าน้ำ") || el.name.includes("ค่าไฟ")
-              ? `${el.name} เดือน: ${monthAgo[1]}/${monthAgo[0]}`
-              : `${el.name} เดือน: ${input.month}/${input.year}`;
-          let type = "N";
-          if (!el.name.includes("ค่าเช่า")) {
-            type = "V";
+          let name = `${el.name} เดือน: ${input.month}/${input.year}`;
+          let qty = 1;
+          let unitPrice = el.price;
+          if (el.name.includes("ค่าน้ำ") || el.name.includes("ค่าไฟ")) {
+            name = `${el.name} เดือน: ${monthAgo[1]}/${monthAgo[0]}`;
+            qty = el?.qty;
+            unitPrice = el?.unitPrice;
           }
+          // let type = "N";
+          // if (!el.name.includes("ค่าเช่า")) {
+          //   type = "V";
+          // }
           resultList.push({
-            type: type,
+            type: el.type,
             name: name,
+            unitBefor: el?.unitBefor || 0,
+            unitAfter: el?.unitAfter || 0,
+            qty: qty.toString(),
+            unitPrice: unitPrice.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+            }),
             price: el.price.toLocaleString("en-US", {
               minimumFractionDigits: 2,
             }),
@@ -631,6 +854,7 @@ export class BillService {
       }
       return {
         id: room.id,
+        nameRoom: room.nameRoom,
         numberBill: numberBill,
         company: {
           name: settingAddress?.name,
@@ -705,7 +929,8 @@ export class BillService {
           ? templateInvoice(data, input, userName, copy)
           : templateInvoices(data, input, userName, copy);
       await page.setContent(htmlContent, { waitUntil: "networkidle0" });
-      const filename = `invoice-${
+      const prefix = copy ? `invoice-copy` : `invoice`;
+      const filename = `${prefix}-${
         data.room.customerName || "customerName"
       }-${dayjs().format("YYYY-MM-DD-HH-mm")}.pdf`;
       const pdfPath = path.join(__dirname, `../../../public/${filename}`);
@@ -737,9 +962,13 @@ export class BillService {
       const userName = req?.user?.name || "admin";
       const browser = await puppeteer.launch();
       const page = await browser.newPage();
-      const htmlContent = templateReceipt(data, input, userName, copy);
+      const htmlContent =
+        input.type === typeRoom.person
+          ? templateReceipt(data, input, userName, copy)
+          : templateReceipts(data, input, userName, copy);
       await page.setContent(htmlContent, { waitUntil: "networkidle0" });
-      const filename = `invoice-${
+      const prefix = copy ? `receipt-copy` : `receipt`;
+      const filename = `${prefix}-${
         data.room.customerName || "customerName"
       }-${dayjs().format("YYYY-MM-DD-HH-mm")}.pdf`;
       const pdfPath = path.join(__dirname, `../../../public/${filename}`);
@@ -761,138 +990,108 @@ export class BillService {
     }
   }
 
-  async generateInvoicePdf(res: Response) {
+  async generateInvoiceDetail(input: CreateBillDto, req: Request, data: any) {
     try {
-      const filename = `invoice-${"customerName"}-${dayjs().format(
+      const browser = await puppeteer.launch();
+      const page = await browser.newPage();
+      console.log("data >>>", data.room);
+      const settingBillUnit = await this.prisma.settingBillUnit.findFirst();
+      const htmlContent = templateDetailInvoices(
+        data,
+        input,
+        settingBillUnit?.waterUnit.toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+        }) || "",
+        settingBillUnit?.electricityUnit.toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+        }) || ""
+      );
+      await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+      const filename = `invoice-detail-${"customerName"}-${dayjs().format(
         "YYYY-MM-DD-HH-mm"
       )}.pdf`;
       const pdfPath = path.join(__dirname, `../../../public/${filename}`);
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename=${encodeURIComponent(pdfPath)}`
+      await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
+      await browser.close();
+      return {
+        pdfPath,
+        filename,
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          message: error?.message,
+        },
+        HttpStatus.BAD_REQUEST
       );
-      res.setHeader("Content-Type", "application/pdf");
-      const doc = new PDFDocument({ size: "A4" });
+    }
+  }
 
-      // Pipe ไปยัง response stream
-      doc.pipe(res);
-      // ฟอนต์ไทย (ต้องใช้ฟอนต์ที่รองรับ)
-      const fontPath = path.resolve("./font/THSarabunNew.ttf");
-      doc.font(fontPath);
-      // หัวใบแจ้งหนี้
-      doc.fontSize(20).text("ใบแจ้งหนี้ (Invoice)", { align: "right" });
-      doc.fontSize(12).text("ต้นฉบับ (Original)", { align: "right" });
-      doc.text("เลขที่ (ID) INV2025000003", { align: "right" });
-      doc.text("วันที่ (Date) 26/01/2025", { align: "right" });
-      doc.text("ห้อง (Room) A109", { align: "right" });
-      doc.text("พนักงาน (Staff) เดชทัต เดชนเสน", { align: "right" });
-      doc.fontSize(14).text("บริษัท พีเอสจี กรุ๊ป จำกัด");
-      doc
-        .fontSize(12)
-        .text(
-          "321 ซอยสุขธรรม 11 หมู่ 6 ถนนขยมจอแจดี ตำบลบางยางพารา อำเภอปฉลาดแดง",
-          { width: 400 }
-        );
-      doc.text("จังหวัดระยอง 21140");
-      doc.text("เลขประจำตัวผู้เสียภาษี 021558004191 (สำนักงานใหญ่)");
-      doc.text("โทร. 0998248989 / อีเมล dcansion.pscgroup@gmail.com");
+  async generateCombinedInvoice(
+    input: CreateBillDto,
+    req: Request,
+    data: any,
+    dataDetail: any
+  ) {
+    try {
+      const userName = req?.user?.name || "admin";
+      const browser = await puppeteer.launch();
+      const page = await browser.newPage();
 
-      doc.moveDown();
+      console.log("dataDetail >>>", dataDetail);
+      const settingBillUnit = await this.prisma.settingBillUnit.findFirst();
+      const htmlContent = `
+        ${templateInvoices(data, input, userName, false)}
+        <div style="page-break-before: always;"></div>
+        ${templateInvoices(data, input, userName, true)}
+        <div style="page-break-before: always;"></div>
+        ${templateDetailInvoices(
+          dataDetail,
+          input,
+          settingBillUnit?.waterUnit.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+          }) || "",
+          settingBillUnit?.electricityUnit.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+          }) || ""
+        )}
+      `;
+      // const htmlContent = `
+      //   ${templateInvoices(data, input, userName, false)}
+      //   <div style="page-break-before: always;"></div>
+      //   ${templateInvoices(data, input, userName, true)}
+      // `;
 
-      // doc.moveDown();
-      // doc.text("ลูกค้า (Customer): A109");
+      await page.setContent(htmlContent, { waitUntil: "networkidle0" });
 
-      // doc.moveDown();
+      const prefix = `invoice`;
+      const filename = `${prefix}-${
+        data.room.customerName || "customerName"
+      }-${dayjs().format("YYYY-MM-DD-HH-mm")}.pdf`;
+      const pdfPath = path.join(__dirname, `../../../public/${filename}`);
 
-      // // ตารางหัวข้อ
-      // doc.rect(50, doc.y, 500, 20).fillAndStroke("#000", "#000");
-      // doc.fillColor("#fff").text("ลำดับ (#)", 55, doc.y + 5);
-      // doc.text("รายการ (Description)", 100, doc.y);
-      // doc.text("จำนวนเงิน (Amount)", 350, doc.y);
-      // doc.text("ภาษี (VAT)", 450, doc.y);
-      // doc.text("รวมเงิน (Total)", 520, doc.y);
-      // doc.fillColor("#000");
-      // doc.moveDown(2);
-
-      // // ข้อมูลใบแจ้งหนี้
-      // const items = [
-      //   {
-      //     no: 1,
-      //     desc: "ค่าเช่าห้อง (Room rate) A109 เดือน 2/2025",
-      //     amount: 2000.0,
-      //     vat: 0.0,
-      //     total: 2000.0,
-      //   },
-      //   {
-      //     no: 2,
-      //     desc: "ค่าน้ำ (Water rate) เดือน 1/2025",
-      //     amount: 60.0,
-      //     vat: 4.2,
-      //     total: 64.2,
-      //   },
-      //   {
-      //     no: 3,
-      //     desc: "ค่าไฟฟ้า (Electrical rate) เดือน 1/2025",
-      //     amount: 112.0,
-      //     vat: 7.84,
-      //     total: 119.84,
-      //   },
-      //   {
-      //     no: 4,
-      //     desc: "ค่าเฟอร์นิเจอร์ (Furniture rate)",
-      //     amount: 1200.0,
-      //     vat: 84.0,
-      //     total: 1284.0,
-      //   },
-      //   {
-      //     no: 5,
-      //     desc: "ค่าธรรมเนียม (Common fee)",
-      //     amount: 200.0,
-      //     vat: 14.0,
-      //     total: 214.0,
-      //   },
-      // ];
-
-      // items.forEach((item, i) => {
-      //   doc.text(item.no, 55, doc.y);
-      //   doc.text(item.desc, 100, doc.y, { width: 250 });
-      //   doc.text(item.amount.toFixed(2), 350, doc.y);
-      //   doc.text(item.vat.toFixed(2), 450, doc.y);
-      //   doc.text(item.total.toFixed(2), 520, doc.y);
-      //   doc.moveDown();
-      // });
-
-      // doc.moveDown();
-
-      // // รวมเงิน
-      // doc.text(
-      //   "มูลค่าสินค้าที่ไม่รวมภาษีมูลค่าเพิ่ม (NON-VAT Items): 2,000.00",
-      //   { align: "right" }
-      // );
-      // doc.text("มูลค่าสินค้าที่มีภาษีมูลค่าเพิ่ม (VAT Items): 1,572.00", {
-      //   align: "right",
-      // });
-      // doc.text("ภาษีมูลค่าเพิ่ม 7.00% (VAT Amount): 110.04", {
-      //   align: "right",
-      // });
-      // doc.fontSize(14).text("ยอดเงินสุทธิ (Total Payment Due): 3,682.04", {
-      //   align: "right",
-      //   underline: true,
-      // });
-
-      // doc.moveDown(2);
-
-      // // ข้อมูลบัญชีโอนเงิน
-      // doc.fontSize(12).text("ข้อมูลการชำระเงิน");
-      // doc.text("ชื่อธนาคาร: กสิกรไทย");
-      // doc.text("ชื่อบัญชี: บจก. พีเอสจี กรุ๊ป");
-      // doc.text("หมายเลขบัญชี: 124-3-37079-1");
-
-      doc.end();
-
-      doc.on("finish", () => {
-        res.end();
+      await page.pdf({
+        path: pdfPath,
+        format: "A4",
+        printBackground: true,
+        displayHeaderFooter: true,
+        headerTemplate: `<div style="font-size:14px; text-align:center; width:100%;"></div>`,
+        footerTemplate: `<div style="font-size:10px; text-align:center; width:100%;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>`,
+        margin: { top: "50px", bottom: "50px" },
       });
-    } catch (error) {}
+
+      await browser.close();
+
+      return {
+        pdfPath,
+        filename,
+      };
+    } catch (error) {
+      this.logger.error("generateCombinedInvoice error >>>", error);
+      throw new HttpException(
+        { message: error?.message },
+        HttpStatus.BAD_REQUEST
+      );
+    }
   }
 }

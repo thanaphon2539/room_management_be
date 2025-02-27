@@ -19,8 +19,8 @@ export class InvoiceBill {
 }
 
 export class ReceiptBill {
-  id?: number;
-  numberBill?: string;
+  id: number;
+  numberBill: string;
   company?: SettingAddress;
   room: Room;
   summary: SummaryItems;
@@ -46,6 +46,8 @@ export class Room {
 export class ExpenseItems {
   type: string;
   name: string;
+  unitBefor?: any;
+  unitAfter?: any;
   qty?: string;
   unitPrice?: string;
   price: string;
