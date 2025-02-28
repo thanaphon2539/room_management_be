@@ -73,6 +73,7 @@ model room {
   transactionWaterUnit       transactionWaterUnit[]
   transactionElectricityUnit transactionElectricityUnit[]
   transactionBill            transactionBill[]
+  serviceOther               serviceOther[]
 
   @@index([nameRoom, type, status])
   @@map("Room")
@@ -133,6 +134,19 @@ model serviceFee {
   @@map("ServiceFee")
 }
 
+model serviceOther {
+  id     Int     @id @default(autoincrement())
+  roomId Int
+  room   room    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  name   String?
+  price  Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@map("ServiceOther")
+}
+
 model transactionWaterUnit {
   id        Int  @id @default(autoincrement())
   roomId    Int
@@ -164,20 +178,21 @@ model transactionElectricityUnit {
 }
 
 model transactionBill {
-  id        Int        @id @default(autoincrement())
-  roomId    Int
-  room      room       @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  month     Int
-  year      Int
-  itemNoVat String
-  itemVat   String
-  vat3      String
-  vat5      String
-  vat7      String
-  total     String
-  status    statusBill
-  number    String
-  type      typeBill
+  id         Int        @id @default(autoincrement())
+  roomId     Int
+  room       room       @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  month      Int
+  year       Int
+  totalNoVat String
+  itemNoVat  String
+  itemVat    String
+  vat3       String
+  vat5       String
+  vat7       String
+  total      String
+  status     statusBill
+  number     String
+  type       typeBill
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())

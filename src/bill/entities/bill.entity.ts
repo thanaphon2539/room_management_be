@@ -56,6 +56,7 @@ export class ExpenseItems {
   vat5: string;
   vat7: string;
   total: string;
+  sort: number;
 }
 
 export class SummaryItems {

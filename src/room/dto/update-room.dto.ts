@@ -29,6 +29,12 @@ export class UpdateServiceFeeDto {
   price: number;
 }
 
+export class UpdateOtherDto {
+  id: number;
+  name: string;
+  price: number;
+}
+
 export class UpdateRoomDto {
   nameRoom: string;
   type: typeRoom;
@@ -39,6 +45,7 @@ export class UpdateRoomDto {
   company: UpdateCompanyDto;
   rent: UpdateRentDto[];
   serviceFee: UpdateServiceFeeDto[];
+  other: UpdateOtherDto[];
 }
 
 export class UpdateRoomWaterUnitAndElectricityUnitDto {

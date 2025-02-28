@@ -25,6 +25,10 @@ export class ServiceFeeDto {
   price: number;
 }
 
+export class OtherDto {
+  name: string;
+  price: number;
+}
 export class RoomDto {
   nameRoom: string;
   status: statusRoom;
@@ -32,6 +36,7 @@ export class RoomDto {
   issueDate: Date;
   rent: RentDto[];
   serviceFee: ServiceFeeDto[];
+  other: OtherDto[];
 }
 
 export class CreateRoomDto {

@@ -5,7 +5,12 @@ import {
   UpdateRoomWaterUnitAndElectricityUnitDto,
 } from "./dto/update-room.dto";
 import { PrismaService } from "src/prisma/prisma.service";
-import { Prisma, typeRoom, typeRoomWaterAndElectricity } from "@prisma/client";
+import {
+  Prisma,
+  statusBill,
+  typeRoom,
+  typeRoomWaterAndElectricity,
+} from "@prisma/client";
 import {
   FilterRoomDto,
   FilterRoomWaterUnitAndElectricityUnitDto,
@@ -13,6 +18,9 @@ import {
 import _ from "lodash";
 import dayjs from "dayjs";
 import { wrapMeta } from "src/libs/meta/wrap-meta";
+import "dayjs/locale/th";
+import buddhistEra from "dayjs/plugin/buddhistEra";
+dayjs.extend(buddhistEra);
 
 @Injectable()
 export class RoomService {
@@ -70,6 +78,14 @@ export class RoomService {
                     },
                   }
                 : undefined,
+            serviceOther:
+              value.other && value.other.length > 0
+                ? {
+                    createMany: {
+                      data: value.other,
+                    },
+                  }
+                : undefined,
           },
           select: {
             id: true,
@@ -117,6 +133,7 @@ export class RoomService {
               const checkName = await this.prisma.roomCompany.findFirst({
                 where: {
                   name: input.company.name.trim(),
+                  idTax: input.company.idTax.trim(),
                 },
               });
               if (checkName) {
@@ -190,6 +207,11 @@ export class RoomService {
               id: "asc",
             },
           },
+          serviceOther: {
+            orderBy: {
+              id: "asc",
+            },
+          },
         },
         orderBy: {
           nameRoom: "asc",
@@ -209,10 +231,15 @@ export class RoomService {
             el?.serviceFee?.length > 0
               ? _.sum(el.serviceFee.map((serviceFee) => serviceFee.price))
               : 0;
+          const serviceOtherTotal =
+            el?.serviceOther?.length > 0
+              ? _.sum(el.serviceOther.map((other) => other.price))
+              : 0;
           return {
             ...el,
             rentTotal: rentTotal,
             serviceFeeTotal: serviceFeeTotal,
+            otherTotal: serviceOtherTotal,
           };
         }),
         count,
@@ -259,6 +286,7 @@ export class RoomService {
         include: {
           rent: true,
           serviceFee: true,
+          serviceOther: true,
         },
       });
       if (!checkRoom) {
@@ -268,6 +296,25 @@ export class RoomService {
         );
       }
       /** ต้องมีการเพิ่ม function เช็คการจ่ายบิล */
+      const checkBill = await this.prisma.transactionBill.findFirst({
+        where: {
+          roomId: id,
+          year: Number(dayjs().format("YYYY")),
+          month: Number(dayjs().format("MM")),
+        },
+      });
+      if (checkBill && checkBill?.status !== statusBill.succuess) {
+        throw new HttpException(
+          `ไม่สามารถอัพเดทข้อมูลได้ เนื่องจากห้อง (${
+            checkRoom.nameRoom
+          }) ค้างค่าเช่าเดือน : ${dayjs(
+            `${checkBill.year}-${checkBill.month}`
+          )
+            .locale("th")
+            .format("MMM BBBB")}`,
+          HttpStatus.BAD_REQUEST
+        );
+      }
       let roomContactId: any;
       let roomCompanyId: any;
       if (input.contact) {
@@ -324,7 +371,7 @@ export class RoomService {
           }
         }
       }
-      if (input.company) {
+      if (input.company && input.type === typeRoom.legalEntity) {
         if (input.company.id) {
           const checkRoomCompany = await this.prisma.roomCompany.findFirst({
             where: { id: input.company.id },
@@ -375,6 +422,8 @@ export class RoomService {
             ).id;
           }
         }
+      } else {
+        roomCompanyId = null;
       }
       if (input.rent.length > 0) {
         const result = checkRoom.rent
@@ -452,6 +501,44 @@ export class RoomService {
           }
         }
       }
+      if (input.other.length > 0) {
+        const result = checkRoom.serviceOther
+          .map((el) => el.id)
+          .reduce((acc, x) => {
+            if (!input.other.map((el) => el.id).includes(x)) {
+              acc.push(x);
+            }
+            return acc;
+          }, [] as number[]);
+        await this.prisma.serviceOther.deleteMany({
+          where: {
+            id: { in: result },
+            roomId: id,
+          },
+        });
+        for (const other of input.other) {
+          if (!other?.id) {
+            await this.prisma.serviceOther.create({
+              data: {
+                roomId: id,
+                name: other.name,
+                price: other.price,
+              },
+            });
+          } else {
+            await this.prisma.serviceOther.update({
+              where: {
+                id: other.id,
+                roomId: id,
+              },
+              data: {
+                name: other.name,
+                price: other.price,
+              },
+            });
+          }
+        }
+      }
       if (input.type !== checkRoom.type) {
         if (checkRoom.roomCompanyId) {
           await this.prisma.roomCompany.delete({
@@ -487,7 +574,10 @@ export class RoomService {
       };
     } catch (error) {
       this.logger.error(error);
-      throw new HttpException(error?.message, HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        `ไม่สามารถอัพเดทข้อมูลได้`,
+        HttpStatus.BAD_REQUEST
+      );
     }
   }
 

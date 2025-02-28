@@ -8,6 +8,7 @@ import { RoomModule } from "./room/room.module";
 import { AppController } from "./app.controller";
 import { BillModule } from "./bill/bill.module";
 import { ScheduleModule } from "@nestjs/schedule";
+import { ReportModule } from './report/report.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ScheduleModule } from "@nestjs/schedule";
     SettingModule,
     RoomModule,
     BillModule,
+    ReportModule,
   ],
   providers: [AppService],
   exports: [AppService],

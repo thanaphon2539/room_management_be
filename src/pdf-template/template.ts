@@ -332,7 +332,7 @@ export function templateReceipt(
         <p><strong>${
           copy ? "สำเนา (Transcript)" : "ต้นฉบับ (Original)"
         }</strong></p>
-        <p>เลขที่(ID) RC${data.numberBill}</p>
+        <p>เลขที่(ID) RCE${data.numberBill}</p>
         <p>รอบบิล(Date) ${input.month}/${input.year}</p>
         <p>วันที่ออก(Date) ${dayjs().format("DD/MM/YYYY")}</p>
         <p>ห้อง(Room) ${data.room.nameRoom}</p>
@@ -489,7 +489,7 @@ export function templateInvoices(
         </td>
         <td colspan="3" class="border-t border-r">
           <div class="text-center">
-            <h2>ใบแจ้งหนี้ (Invoice))</h2>
+            <h2>ใบแจ้งหนี้ (Invoice)</h2>
             <p><strong>${
               copy ? "สำเนา (Transcript)" : "ต้นฉบับ (Original)"
             }</strong></p>
@@ -519,8 +519,14 @@ export function templateInvoices(
               .format("DD/MM/BBBB")}</p>
             <p><strong>เดือน:</strong> ${dayjs(`${input.year}-${input.month}`)
               .locale("th")
-              .format("MMMM")} / ${dayjs().locale("en").format("MMMM")}</p>
-            <p><strong>กำหนดชำระ:</strong> </p>
+              .format("MMMM")} / ${dayjs(`${input.year}-${input.month}`)
+    .locale("en")
+    .format("MMMM")}</p>
+            <p><strong>กำหนดชำระ:</strong>${dayjs(
+              `${input.year}-${input.month}`
+            )
+              .locale("th")
+              .format("07/MM/BBBB")}</p>
             <br>
           </div>
         </td>
@@ -600,7 +606,12 @@ export function templateInvoices(
 
       <tr class="text-end">
         <td colspan="2" class="border-r">รวมหัก ณ ที่จ่าย</td>
-        <td colspan="1" class="border-r">${data.summary.vat}</td>
+        <td colspan="1" class="border-r">${(
+          parseFloat(data.summary.vat3.replace(/,/g, "")) +
+          parseFloat(data.summary.vat5.replace(/,/g, ""))
+        ).toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+        })}</td>
       </tr>
 
       <tr>
@@ -614,7 +625,7 @@ export function templateInvoices(
       <tr>
         <td colspan="3" class="border-r border-l border-t"><br><strong>ข้อมูลการชำระเงิน</strong></td>
         <td colspan="3" rowspan="3" class="border-r border-t"><br><strong>ผู้รับบิล</strong></td>
-        <td colspan="3" rowspan="3" class="border-r border-t"><br><strong>ผู้วางบิลในนามบริษัท ${
+        <td colspan="3" rowspan="3" class="border-r border-t"><br><strong>ผู้วางบิลในนาม ${
           data.company?.name
         }</strong>
         </td>
@@ -631,14 +642,14 @@ export function templateInvoices(
       <tr>
         <td colspan="3" class="border-l border-r ">หมายเลขบัญชี: 124-3-37079-1</td>
         <td colspan="3" class=" border-r text-end">วันที่: ____________________</td>
-        <td colspan="3" class=" border-r text-center">วันที่: ${dayjs()
-          .locale("th")
-          .format("DD/MM/BBBB")}</td>
+        <td colspan="3" class=" border-r text-center" style="height :150px"></td>
       </tr>
       <tr height="20px">
         <td colspan="3" width="33%" class="border-l border-r border-b"/>
         <td colspan="3" width="33%" class=" border-r border-b"/>
-        <td colspan="3" width="33%" class=" border-r border-b"/>
+        <td colspan="3" width="33%" class=" border-r border-b text-center">วันที่: ${dayjs()
+          .locale("th")
+          .format("DD/MM/BBBB")}</td>
       </tr>
 
 
@@ -755,14 +766,15 @@ export function templateReceipts(
         <td colspan="3" class="border-t border-r">
           <div>
             <br>
-            <p><strong>เลขที่:</strong> INV${data.numberBill}</p>
+            <p><strong>เลขที่:</strong> REC${data.numberBill}</p>
             <p><strong>วันที่:</strong> ${dayjs()
               .locale("th")
               .format("DD/MM/BBBB")}</p>
             <p><strong>เดือน:</strong> ${dayjs(`${input.year}-${input.month}`)
               .locale("th")
-              .format("MMMM")} / ${dayjs().locale("en").format("MMMM")}</p>
-            <p><strong>กำหนดชำระ:</strong> </p>
+              .format("MMMM")} / ${dayjs(`${input.year}-${input.month}`)
+    .locale("en")
+    .format("MMMM")}</p>
             <br>
           </div>
         </td>
@@ -842,7 +854,12 @@ export function templateReceipts(
 
       <tr class="text-end">
         <td colspan="2" class="border-r">รวมหัก ณ ที่จ่าย</td>
-        <td colspan="1" class="border-r">${data.summary.vat}</td>
+        <td colspan="1" class="border-r">${(
+          parseFloat(data.summary.vat3.replace(/,/g, "")) +
+          parseFloat(data.summary.vat5.replace(/,/g, ""))
+        ).toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+        })}</td>
       </tr>
 
       <tr>
@@ -856,7 +873,7 @@ export function templateReceipts(
       <tr>
         <td colspan="3" class="border-r border-l border-t"><br><strong>ข้อมูลการชำระเงิน</strong></td>
         <td colspan="3" rowspan="3" class="border-r border-t"><br><strong>ผู้รับบิล</strong></td>
-        <td colspan="3" rowspan="3" class="border-r border-t"><br><strong>ผู้วางบิลในนามบริษัท ${
+        <td colspan="3" rowspan="3" class="border-r border-t"><br><strong>ผู้รับเงินในนาม ${
           data.company?.name
         }</strong>
         </td>
@@ -870,17 +887,17 @@ export function templateReceipts(
         <td colspan="3" class="border-l border-r">ชื่อบัญชี: บจก.พีเอสซี กรุ๊บ</td>
       </tr>
 
-      <tr>
+       <tr>
         <td colspan="3" class="border-l border-r ">หมายเลขบัญชี: 124-3-37079-1</td>
         <td colspan="3" class=" border-r text-end">วันที่: ____________________</td>
-        <td colspan="3" class=" border-r text-center">วันที่: ${dayjs()
-          .locale("th")
-          .format("DD/MM/BBBB")}</td>
+        <td colspan="3" class=" border-r text-center" style="height :150px"></td>
       </tr>
       <tr height="20px">
         <td colspan="3" width="33%" class="border-l border-r border-b"/>
         <td colspan="3" width="33%" class=" border-r border-b"/>
-        <td colspan="3" width="33%" class=" border-r border-b"/>
+        <td colspan="3" width="33%" class=" border-r border-b text-center">วันที่: ${dayjs()
+          .locale("th")
+          .format("DD/MM/BBBB")}</td>
       </tr>
 
 
@@ -980,6 +997,9 @@ export function templateDetailInvoices(
       td:nth-child(14) {
         background-color: lightblue;
       }
+      .no-bg, .no-bg td {
+        background-color: transparent !important;
+      }
     }
   </style>
 </head>
@@ -1041,7 +1061,7 @@ export function templateDetailInvoices(
 
           <th style="background-color: mintcream;">Meter start</th>
           <th style="background-color: mintcream;">Meter to</th>
-          <th style="background-color: mintcream;">Use:unit-</th>
+          <th style="background-color: mintcream;">Use:unit</th>
           <th style="background-color: mintcream;">Bath</th>
         </tr>
       </thead>
@@ -1055,21 +1075,37 @@ export function templateDetailInvoices(
               <td>${item.roomNumber}</td>
               <td>${item.rent}</td>
               <td>${item.service}</td>
-              <td>0</td>
-              <td>${item.water.befor}</td>
-              <td>${item.water.after}</td>
-              <td>${item.water.used}</td>
-              <td>${item.water.total}</td>
+              <td>${item.commonFee}</td>
               <td>${item.electricity.befor}</td>
               <td>${item.electricity.after}</td>
               <td>${item.electricity.used}</td>
               <td>${item.electricity.total}</td>
-              <td>0</td>
+              <td>${item.water.befor}</td>
+              <td>${item.water.after}</td>
+              <td>${item.water.used}</td>
+              <td>${item.water.total}</td>
+              <td>${item.otherFee}</td>
               <td>${item.total}</td>
             </tr>
              `
         )
         .join("")}
+       <tr class="no-bg">
+          <td colspan="3">รวม</td>
+          <td>${data.summary.rent}</td>
+          <td>${data.summary.service}</td>
+          <td>${data.summary.commonFee}</td>
+          <td></td>
+          <td></td>
+          <td class="non-bg">${data.summary.electricity.used}</td>
+          <td class="non-bg">${data.summary.electricity.total}</td>
+          <td class="non-bg"></td>
+          <td class="non-bg"></td>
+          <td class="non-bg">${data.summary.water.used}</td>
+          <td>${data.summary.water.total}</td>
+          <td>${data.summary.otherFee}</td>
+          <td>${data.summary.total}</td>
+        </tr>
       </tbody>
     </table>
   </div>

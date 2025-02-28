@@ -61,6 +61,7 @@ export class BillService {
               roomId: value.id,
               year: input.year,
               month: input.month,
+              totalNoVat: value.summary.totalNoVat,
               itemNoVat: value.summary.itemNoVat,
               itemVat: value.summary.itemVat,
               vat3: value.summary.vat3,
@@ -78,6 +79,7 @@ export class BillService {
               roomId: value.id,
               year: input.year,
               month: input.month,
+              totalNoVat: value.summary.totalNoVat,
               itemNoVat: value.summary.itemNoVat,
               itemVat: value.summary.itemVat,
               vat3: value.summary.vat3,
@@ -98,76 +100,31 @@ export class BillService {
           nameRoom: _.uniq(genData.data.map((el) => el.room.nameRoom)).join(
             ","
           ),
-          customerName: genData.data[0].room.customerName,
-          customerAddress: genData.data[0].room.customerAddress,
+          customerName: genData.data[0].room?.customerName,
+          customerAddress: genData.data[0].room?.customerAddress,
+          customerIdTax: genData.data[0].room?.customerIdTax,
           list: genData.data[0].room.list,
         },
         summary: genData.data[0].summary,
       };
       let newObjDetail: any = {};
-      if (genData.data.length > 1) {
-        if (detail) {
-          newObjDetail = {
-            ...newObj,
-            room: genData.data.map((el) => {
-              console.log("genData.data >>>", el.room);
-              const rent =
-                _.sum(
-                  el.room.list
-                    .filter((rent) => rent.type === "N")
-                    .map((rent) => parseFloat(rent.price.replace(/,/g, "")))
-                ) || 0;
-              const service =
-                _.sum(
-                  el.room.list
-                    .filter((service) => service.type === "*V")
-                    .map((service) =>
-                      parseFloat(service.price.replace(/,/g, ""))
-                    )
-                ) || 0;
-              const water = el.room.list.find((water) =>
-                water.name.includes("ค่าน้ำ")
-              );
-              const electricity = el.room.list.find((electricity) =>
-                electricity.name.includes("ค่าไฟ")
-              );
-              const waterTotal = water?.price
-                ? parseFloat(water.price.replace(/,/g, ""))
-                : 0;
-              const electricityTotal = electricity?.price
-                ? parseFloat(electricity.price.replace(/,/g, ""))
-                : 0;
-              return {
-                building: el?.nameRoom.slice(0, 1),
-                roomNumber: el?.nameRoom.slice(1),
-                rent: rent,
-                service: service,
-                water: {
-                  befor: water?.unitBefor || 0,
-                  after: water?.unitAfter || 0,
-                  used: water?.qty || 0,
-                  total: waterTotal,
-                },
-                electricity: {
-                  befor: electricity?.unitBefor || 0,
-                  after: electricity?.unitAfter || 0,
-                  used: electricity?.qty || 0,
-                  total: electricity?.price
-                    ? parseFloat(electricity.price.replace(/,/g, ""))
-                    : 0,
-                },
-                total: (
-                  rent +
-                  service +
-                  waterTotal +
-                  electricityTotal
-                ).toLocaleString("en-US", {
-                  minimumFractionDigits: 2,
-                }),
-              };
-            }),
-          };
-        }
+      if (input.type === typeRoom.legalEntity) {
+        const roomDetail: any[] = [];
+        const summary = {
+          rent: 0,
+          service: 0,
+          commonFee: 0,
+          water: {
+            used: 0,
+            total: 0,
+          },
+          electricity: {
+            used: 0,
+            total: 0,
+          },
+          otherFee: 0,
+          total: 0,
+        };
         newObj["id"] = genData.data.map((el) => el.id);
         newObj["summary"] = {
           itemNoVat: 0,
@@ -192,6 +149,9 @@ export class BillService {
               };
             })
           );
+          const totalNoVat = parseFloat(
+            value.summary.totalNoVat.replace(/,/g, "")
+          );
           const itemNoVat = parseFloat(
             value.summary.itemNoVat.replace(/,/g, "")
           );
@@ -201,6 +161,7 @@ export class BillService {
           const vat5 = parseFloat(value.summary.vat5.replace(/,/g, ""));
           const vat7 = parseFloat(value.summary.vat7.replace(/,/g, ""));
           const total = parseFloat(value.summary.total.replace(/,/g, ""));
+          newObj["summary"]["totalNoVat"] += totalNoVat;
           newObj["summary"]["itemNoVat"] += itemNoVat;
           newObj["summary"]["itemVat"] += itemVat;
           newObj["summary"]["vat"] += vat;
@@ -208,17 +169,111 @@ export class BillService {
           newObj["summary"]["vat5"] += vat5;
           newObj["summary"]["vat7"] += vat7;
           newObj["summary"]["total"] += total;
+
+          // console.log("genData.data >>>", el.room);
+          /** detail */
+          const rent =
+            _.sum(
+              value.room.list
+                .filter((rent) => rent.type === "N")
+                .map((rent) => parseFloat(rent.price.replace(/,/g, "")))
+            ) || 0;
+          summary.rent += rent;
+          const service =
+            _.sum(
+              value.room.list
+                .filter(
+                  (service) =>
+                    service.type === "*V" && !service.name.includes("ส่วนกลาง")
+                )
+                .map((service) => parseFloat(service.price.replace(/,/g, "")))
+            ) || 0;
+          summary.service += service;
+          const commonFee =
+            _.sum(
+              value.room.list
+                .filter(
+                  (service) =>
+                    service.type === "*V" && service.name.includes("ส่วนกลาง")
+                )
+                .map((service) => parseFloat(service.price.replace(/,/g, "")))
+            ) || 0;
+          summary.commonFee += commonFee;
+          const water = value.room.list.find((water) =>
+            water.name.includes("ค่าน้ำ")
+          );
+          const waterTotal = water?.price
+            ? parseFloat(water.price.replace(/,/g, ""))
+            : 0;
+          summary.water.used += parseFloat(water?.qty.replace(/,/g, "")) || 0;
+          summary.water.total += waterTotal;
+          const electricity = value.room.list.find((electricity) =>
+            electricity.name.includes("ค่าไฟ")
+          );
+          const electricityTotal = electricity?.price
+            ? parseFloat(electricity.price.replace(/,/g, ""))
+            : 0;
+          summary.electricity.used +=
+            parseFloat(electricity?.qty.replace(/,/g, "")) || 0;
+          summary.electricity.total += electricityTotal;
+          const otherFee =
+            _.sum(
+              value.room.list
+                .filter((other) => other.type === "")
+                .map((other) => parseFloat(other.price.replace(/,/g, "")))
+            ) || 0;
+          summary.otherFee += otherFee;
+          summary.total +=
+            rent + service + waterTotal + electricityTotal + otherFee;
+          roomDetail.push({
+            building: value?.nameRoom.slice(0, 1),
+            roomNumber: value?.nameRoom.slice(1),
+            rent: rent,
+            service: service,
+            commonFee: commonFee,
+            water: {
+              befor: water?.unitBefor || 0,
+              after: water?.unitAfter || 0,
+              used: water?.qty || 0,
+              total: waterTotal,
+            },
+            electricity: {
+              befor: electricity?.unitBefor || 0,
+              after: electricity?.unitAfter || 0,
+              used: electricity?.qty || 0,
+              total: electricity?.price
+                ? parseFloat(electricity.price.replace(/,/g, ""))
+                : 0,
+            },
+            otherFee: otherFee,
+            total: (
+              rent +
+              service +
+              waterTotal +
+              electricityTotal +
+              otherFee
+            ).toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+            }),
+          });
         }
-        // console.log("list >>>", list);
+        if (detail) {
+          newObjDetail = {
+            ...newObj,
+            room: roomDetail,
+            summary: {
+              ...summary,
+              total: summary.total.toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+              }),
+            },
+          };
+        }
+        console.log("list >>>", list);
         const dataGroupList = _.groupBy(list, "namePrice");
         const newObjList: any[] = [];
         for (const key in dataGroupList) {
           const [data] = dataGroupList[key];
-          newObj["summary"]["totalNoVat"] += _.sum(
-            dataGroupList[key].map((el) =>
-              parseFloat(el.price.replace(/,/g, ""))
-            )
-          );
           let unitPrice = dataGroupList[key][0]["price"];
           if (data.name.includes("ค่าน้ำ") || data.name.includes("ค่าไฟ")) {
             unitPrice = data?.unitPrice;
@@ -239,6 +294,7 @@ export class BillService {
             ).toLocaleString("en-US", {
               minimumFractionDigits: 2,
             }),
+            sort: data.sort,
           });
         }
         newObj["room"]["list"] = _.orderBy(newObjList, "sort", "asc");
@@ -292,7 +348,7 @@ export class BillService {
         ].toLocaleString("en-US", {
           minimumFractionDigits: 2,
         });
-        // console.log("newObj >>>", newObj);
+        // console.log("newObj >>>", newObj.room);
         return this.generateCombinedInvoice(input, req, newObj, newObjDetail);
       } else {
         return this.generateInvoice(input, req, newObj, copy);
@@ -349,6 +405,7 @@ export class BillService {
               roomId: value.id,
               year: input.year,
               month: input.month,
+              totalNoVat: value.summary.totalNoVat,
               itemNoVat: value.summary.itemNoVat,
               itemVat: value.summary.itemVat,
               vat3: value.summary.vat3,
@@ -366,6 +423,7 @@ export class BillService {
               roomId: value.id,
               year: input.year,
               month: input.month,
+              totalNoVat: value.summary.totalNoVat,
               itemNoVat: value.summary.itemNoVat,
               itemVat: value.summary.itemVat,
               vat3: value.summary.vat3,
@@ -386,12 +444,14 @@ export class BillService {
           nameRoom: _.uniq(genData.data.map((el) => el.room.nameRoom)).join(
             ","
           ),
-          customerName: genData.data[0].room.customerName,
+          customerName: genData.data[0].room?.customerName,
+          customerAddress: genData.data[0].room?.customerAddress,
+          customerIdTax: genData.data[0].room?.customerIdTax,
           list: genData.data[0].room.list,
         },
         summary: genData.data[0].summary,
       };
-      if (genData.data.length > 1) {
+      if (input.type === typeRoom.legalEntity) {
         newObj["id"] = genData.data.map((el) => el.id);
         newObj["summary"] = {
           itemNoVat: 0,
@@ -409,9 +469,15 @@ export class BillService {
             ...value.room.list.map((el) => {
               return {
                 ...el,
-                namePrice: `${el.name}${el.price}`,
+                namePrice:
+                  el.name.includes("ค่าน้ำ") || el.name.includes("ค่าไฟ")
+                    ? el.name
+                    : `${el.name}${el.price}`,
               };
             })
+          );
+          const totalNoVat = parseFloat(
+            value.summary.totalNoVat.replace(/,/g, "")
           );
           const itemNoVat = parseFloat(
             value.summary.itemNoVat.replace(/,/g, "")
@@ -422,6 +488,7 @@ export class BillService {
           const vat5 = parseFloat(value.summary.vat5.replace(/,/g, ""));
           const vat7 = parseFloat(value.summary.vat7.replace(/,/g, ""));
           const total = parseFloat(value.summary.total.replace(/,/g, ""));
+          newObj["summary"]["totalNoVat"] += totalNoVat;
           newObj["summary"]["itemNoVat"] += itemNoVat;
           newObj["summary"]["itemVat"] += itemVat;
           newObj["summary"]["vat"] += vat;
@@ -430,21 +497,24 @@ export class BillService {
           newObj["summary"]["vat7"] += vat7;
           newObj["summary"]["total"] += total;
         }
+        // console.log("list >>>", list);
         const dataGroupList = _.groupBy(list, "namePrice");
         const newObjList: any[] = [];
-
         for (const key in dataGroupList) {
           const [data] = dataGroupList[key];
-          newObj["summary"]["totalNoVat"] += _.sum(
-            dataGroupList[key].map((el) =>
-              parseFloat(el.price.replace(/,/g, ""))
-            )
-          );
+          let unitPrice = dataGroupList[key][0]["price"];
+          if (data.name.includes("ค่าน้ำ") || data.name.includes("ค่าไฟ")) {
+            unitPrice = data?.unitPrice;
+          }
           newObjList.push({
             type: data.type,
             name: data.name,
-            qty: dataGroupList[key].length.toString(),
-            unitPrice: dataGroupList[key][0]["price"],
+            qty: _.sum(
+              dataGroupList[key].map((el) =>
+                parseFloat(el.qty.replace(/,/g, ""))
+              )
+            ),
+            unitPrice: unitPrice,
             price: _.sum(
               dataGroupList[key].map((el) =>
                 parseFloat(el.price.replace(/,/g, ""))
@@ -452,11 +522,12 @@ export class BillService {
             ).toLocaleString("en-US", {
               minimumFractionDigits: 2,
             }),
+            sort: data.sort,
           });
         }
-        newObj["room"]["list"] = _.orderBy(newObjList, "type", "asc");
+        newObj["room"]["list"] = _.orderBy(newObjList, "sort", "asc");
         newObj["summary"]["totalBeforVat"] = (
-          newObj["summary"]["totalNoVat"] - newObj["summary"]["itemVat"]
+          newObj["summary"]["totalNoVat"] - newObj["summary"]["itemNoVat"]
         ).toLocaleString("en-US", {
           minimumFractionDigits: 2,
         });
@@ -505,8 +576,8 @@ export class BillService {
         ].toLocaleString("en-US", {
           minimumFractionDigits: 2,
         });
-        console.log("newObj >>>", newObj);
-        return this.generateReceipt(input, req, newObj, copy);
+        // console.log("newObj >>>", newObj);
+        return this.generateCombinedReceipt(input, req, newObj);
       } else {
         return this.generateReceipt(input, req, newObj, copy);
       }
@@ -620,6 +691,7 @@ export class BillService {
           roomCompany: true,
           rent: true,
           serviceFee: true,
+          serviceOther: true,
         },
       });
       if (room.length === 0) {
@@ -769,8 +841,16 @@ export class BillService {
             sort: 4,
           };
         }),
+        ...room.serviceOther.map((el) => {
+          return {
+            ...el,
+            type: "",
+            sort: 5,
+          };
+        }),
       ];
       const summary = {
+        totalNoVat: 0,
         itemNoVat: 0,
         itemVat: 0,
         vat: 0,
@@ -785,16 +865,18 @@ export class BillService {
         let vat3 = 0;
         let vat5 = 0;
         let vat7 = 0;
+        /** เผื่อกลับมาใช้ */
         if (input.type === typeRoom.person) {
           if (el?.type === "V" || el?.type === "*V") {
             vat = (el.price * 7) / 100;
             vat7 = (el.price * 7) / 100;
           }
         } else {
-          if (el?.type === "V") {
+          if (el?.type !== "N") {
             vat = (el.price * 7) / 100;
             vat7 = (el.price * 7) / 100;
-          } else if (el?.type === "*V") {
+          }
+          if (el?.type === "*V") {
             vat = (el.price * 3) / 100;
             vat3 = (el.price * 3) / 100;
           } else if (el?.type === "N") {
@@ -842,7 +924,9 @@ export class BillService {
             total: (el.price + vat3 + vat5 + vat7).toLocaleString("en-US", {
               minimumFractionDigits: 2,
             }),
+            sort: el.sort,
           });
+          summary.totalNoVat += el.price;
           summary.itemNoVat += el.name?.includes("ค่าเช่า") ? el.price : 0;
           summary.itemVat += !el.name?.includes("ค่าเช่า") ? el.price : 0;
           summary.vat += vat;
@@ -881,6 +965,9 @@ export class BillService {
           list: resultList,
         },
         summary: {
+          totalNoVat: summary.totalNoVat.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+          }),
           itemNoVat: summary.itemNoVat.toLocaleString("en-US", {
             minimumFractionDigits: 2,
           }),
@@ -1038,7 +1125,7 @@ export class BillService {
       const browser = await puppeteer.launch();
       const page = await browser.newPage();
 
-      console.log("dataDetail >>>", dataDetail);
+      // console.log("dataDetail >>>", dataDetail);
       const settingBillUnit = await this.prisma.settingBillUnit.findFirst();
       const htmlContent = `
         ${templateInvoices(data, input, userName, false)}
@@ -1056,11 +1143,6 @@ export class BillService {
           }) || ""
         )}
       `;
-      // const htmlContent = `
-      //   ${templateInvoices(data, input, userName, false)}
-      //   <div style="page-break-before: always;"></div>
-      //   ${templateInvoices(data, input, userName, true)}
-      // `;
 
       await page.setContent(htmlContent, { waitUntil: "networkidle0" });
 
@@ -1088,6 +1170,51 @@ export class BillService {
       };
     } catch (error) {
       this.logger.error("generateCombinedInvoice error >>>", error);
+      throw new HttpException(
+        { message: error?.message },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+
+  async generateCombinedReceipt(input: CreateBillDto, req: Request, data: any) {
+    try {
+      const userName = req?.user?.name || "admin";
+      const browser = await puppeteer.launch();
+      const page = await browser.newPage();
+
+      const htmlContent = `
+        ${templateReceipts(data, input, userName, false)}
+        <div style="page-break-before: always;"></div>
+        ${templateReceipts(data, input, userName, true)}
+      `;
+
+      await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+
+      const prefix = `receipt`;
+      const filename = `${prefix}-${
+        data.room.customerName || "customerName"
+      }-${dayjs().format("YYYY-MM-DD-HH-mm")}.pdf`;
+      const pdfPath = path.join(__dirname, `../../../public/${filename}`);
+
+      await page.pdf({
+        path: pdfPath,
+        format: "A4",
+        printBackground: true,
+        displayHeaderFooter: true,
+        headerTemplate: `<div style="font-size:14px; text-align:center; width:100%;"></div>`,
+        footerTemplate: `<div style="font-size:10px; text-align:center; width:100%;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>`,
+        margin: { top: "50px", bottom: "50px" },
+      });
+
+      await browser.close();
+
+      return {
+        pdfPath,
+        filename,
+      };
+    } catch (error) {
+      this.logger.error("generateCombinedReceipt error >>>", error);
       throw new HttpException(
         { message: error?.message },
         HttpStatus.BAD_REQUEST
