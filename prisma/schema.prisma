@@ -74,6 +74,9 @@ model room {
   transactionElectricityUnit transactionElectricityUnit[]
   transactionBill            transactionBill[]
   serviceOther               serviceOther[]
+  transactionCheckIn         transactionCheckIn[]
+  transactionCheckOut        transactionCheckOut[]
+  transactionBlank           transactionBlank[]
 
   @@index([nameRoom, type, status])
   @@map("Room")
@@ -199,6 +202,42 @@ model transactionBill {
   updatedAt DateTime @default(now())
 
   @@map("TransactionBill")
+}
+
+model transactionCheckIn {
+  id     Int      @id @default(autoincrement())
+  roomId Int
+  room   room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  date   DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@map("TransactionCheckIn")
+}
+
+model transactionCheckOut {
+  id     Int    @id @default(autoincrement())
+  roomId Int
+  room   room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  date   DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@map("TransactionCheckOut")
+}
+
+model transactionBlank {
+  id     Int    @id @default(autoincrement())
+  roomId Int
+  room   room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  date   DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@map("TransactionBlank")
 }
 
 enum typeRoom {

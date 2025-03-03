@@ -2,6 +2,7 @@ import { HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "src/prisma/prisma.service";
 import ExcelJS from "exceljs";
 import { statusBill, typeBill, typeRoom } from "@prisma/client";
+import dayjs from "dayjs";
 
 @Injectable()
 export class ReportService {
@@ -27,7 +28,7 @@ export class ReportService {
           },
         },
       });
-      console.log("data >>>", data);
+      // console.log("data >>>", data);
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("My Sheet");
 
@@ -107,11 +108,12 @@ export class ReportService {
 
   async generateCheckinExcel(year: number, month: number) {
     try {
-      const data = await this.prisma.transactionBill.findMany({
+      const data = await this.prisma.transactionCheckIn.findMany({
         where: {
-          year: year,
-          month: month,
-          type: typeBill.invoice,
+          date: {
+            gte: dayjs(`${year}-${month}`).startOf("months").toDate(),
+            lte: dayjs(`${year}-${month}`).endOf("months").toDate(),
+          },
         },
         include: {
           room: {
@@ -122,7 +124,7 @@ export class ReportService {
           },
         },
       });
-      console.log("data >>>", data);
+      // console.log("data >>>", data);
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("My Sheet");
 
@@ -130,13 +132,7 @@ export class ReportService {
       worksheet.addRow(["รายงานบิลค่าเช่ารายเดือน"]);
       worksheet.addRow(["กรองข้องมูล", `ปี ${year}`, `เดือน ${month}`]);
       worksheet.addRow([]);
-      worksheet.addRow([
-        "ลำดับ",
-        "ห้อง",
-        "ประเภท",
-        "ข้อมูลผู้ติดต่อ",
-        "วันที่เข้าพัก",
-      ]);
+      worksheet.addRow(["ลำดับ", "ห้อง", "ประเภท", "ข้อมูลผู้ติดต่อ"]);
 
       // Add data rows
       let i = 1;
@@ -150,6 +146,147 @@ export class ReportService {
         worksheet.addRow([i, value.room.nameRoom, type, customer]);
         i++;
       }
+
+      /** รวม */
+      worksheet.addRow([`รวม`, `${i} ห้อง`]);
+
+      // Set column widths
+      worksheet.columns = [
+        { width: 10 },
+        { width: 10 },
+        { width: 10 },
+        { width: 20 },
+        { width: 10 },
+        { width: 10 },
+      ];
+
+      // Write the Excel file to a buffer
+      const buffer = await workbook.xlsx.writeBuffer();
+
+      return buffer;
+    } catch (error) {
+      throw new HttpException(error?.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async generateCheckoutExcel(year: number, month: number) {
+    try {
+      const data = await this.prisma.transactionCheckOut.findMany({
+        where: {
+          date: {
+            gte: dayjs(`${year}-${month}`).startOf("months").toDate(),
+            lte: dayjs(`${year}-${month}`).endOf("months").toDate(),
+          },
+        },
+        include: {
+          room: {
+            include: {
+              roomContact: true,
+              roomCompany: true,
+            },
+          },
+        },
+      });
+      // console.log("data >>>", data);
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("My Sheet");
+
+      // Add header row
+      worksheet.addRow(["รายงานบิลค่าเช่ารายเดือน"]);
+      worksheet.addRow(["กรองข้องมูล", `ปี ${year}`, `เดือน ${month}`]);
+      worksheet.addRow([]);
+      worksheet.addRow([
+        "ลำดับ",
+        "ห้อง",
+        "ประเภท",
+        "ข้อมูลผู้ติดต่อ",
+        "วันที่ออก",
+      ]);
+
+      // Add data rows
+      let i = 1;
+      let type = `บุคคล`;
+      for (const value of data) {
+        let customer = value.room?.roomContact?.name;
+        if (value.room.type === typeRoom.legalEntity) {
+          type = `นิติบุคคล`;
+          customer = value.room?.roomCompany?.name;
+        }
+        worksheet.addRow([
+          i,
+          value.room.nameRoom,
+          type,
+          customer,
+          dayjs(value.date).format("DD/MM/YYYY"),
+        ]);
+        i++;
+      }
+
+      /** รวม */
+      worksheet.addRow([`รวม`, `${i} ห้อง`]);
+
+      // Set column widths
+      worksheet.columns = [
+        { width: 10 },
+        { width: 10 },
+        { width: 10 },
+        { width: 20 },
+        { width: 10 },
+        { width: 10 },
+      ];
+
+      // Write the Excel file to a buffer
+      const buffer = await workbook.xlsx.writeBuffer();
+
+      return buffer;
+    } catch (error) {
+      throw new HttpException(error?.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async generateBlankExcel(year: number, month: number) {
+    try {
+      const data = await this.prisma.transactionBlank.findMany({
+        where: {
+          date: {
+            gte: dayjs(`${year}-${month}`).startOf("months").toDate(),
+            lte: dayjs(`${year}-${month}`).endOf("months").toDate(),
+          },
+        },
+        include: {
+          room: {
+            include: {
+              roomContact: true,
+              roomCompany: true,
+            },
+          },
+        },
+      });
+      // console.log("data >>>", data);
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("My Sheet");
+
+      // Add header row
+      worksheet.addRow(["รายงานบิลค่าเช่ารายเดือน"]);
+      worksheet.addRow(["กรองข้องมูล", `ปี ${year}`, `เดือน ${month}`]);
+      worksheet.addRow([]);
+      worksheet.addRow(["ลำดับ", "ห้อง", "ประเภท", "ข้อมูลผู้ติดต่อ"]);
+
+      // Add data rows
+      let i = 1;
+      let type = `บุคคล`;
+      for (const value of data) {
+        let customer = value.room?.roomContact?.name;
+        if (value.room.type === typeRoom.legalEntity) {
+          type = `นิติบุคคล`;
+          customer = value.room?.roomCompany?.name;
+        }
+        worksheet.addRow([i, value.room.nameRoom, type, customer]);
+        i++;
+      }
+
+      /** รวม */
+      worksheet.addRow([`รวม`, `${i} ห้อง`]);
 
       // Set column widths
       worksheet.columns = [

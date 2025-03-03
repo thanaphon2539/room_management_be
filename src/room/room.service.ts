@@ -8,6 +8,7 @@ import { PrismaService } from "src/prisma/prisma.service";
 import {
   Prisma,
   statusBill,
+  statusRoom,
   typeRoom,
   typeRoomWaterAndElectricity,
 } from "@prisma/client";
@@ -41,67 +42,13 @@ export class RoomService {
         }
         const checkNameRoom = await this.prisma.room.findFirst({
           where: {
-            nameRoom: value.nameRoom,
+            nameRoom: value.nameRoom.trim(),
           },
         });
-        if (checkNameRoom) {
-          throw new HttpException(
-            `ไม่สามารถสร้างได้เนื่องจากมีห้องหมายเลขนี้อยู่ในระบบแล้ว`,
-            HttpStatus.BAD_REQUEST
-          );
-        }
-        const created: Prisma.roomCreateArgs = {
-          data: {
-            nameRoom: value.nameRoom,
-            type: input.type,
-            status: value.status,
-            dateOfStay: value?.dateOfStay
-              ? dayjs(value.dateOfStay).toDate()
-              : null,
-            issueDate: value?.issueDate
-              ? dayjs(value.issueDate).toDate()
-              : null,
-            rent:
-              value.rent && value.rent.length > 0
-                ? {
-                    createMany: {
-                      data: value.rent,
-                    },
-                  }
-                : undefined,
-
-            serviceFee:
-              value.serviceFee && value.serviceFee.length > 0
-                ? {
-                    createMany: {
-                      data: value.serviceFee,
-                    },
-                  }
-                : undefined,
-            serviceOther:
-              value.other && value.other.length > 0
-                ? {
-                    createMany: {
-                      data: value.other,
-                    },
-                  }
-                : undefined,
-          },
-          select: {
-            id: true,
-          },
-        };
-        const result = await this.prisma.room.create(created).catch((error) => {
-          this.logger.error(error);
-          throw new HttpException(
-            `สร้างข้อมูลไม่สำเร็จ`,
-            HttpStatus.BAD_REQUEST
-          );
-        });
-        if (result) {
-          let contactId: number | null = null; // แก้ให้สามารถเป็น null ได้
-          let companyId: number | null = null; // แก้ให้สามารถเป็น null ได้
-          if (input.contact) {
+        if (checkNameRoom && checkNameRoom.status === statusRoom.blank) {
+          let roomContactId: any;
+          let roomCompanyId: any;
+          if (input?.contact) {
             let name = false;
             if (input.contact?.name) {
               const checkName = await this.prisma.roomContact.findFirst({
@@ -110,56 +57,342 @@ export class RoomService {
                 },
               });
               if (checkName) {
-                contactId = checkName.id;
+                roomContactId = checkName.id;
                 name = true;
               }
             }
             if (!name) {
-              const createdContact = await this.prisma.roomContact.create({
-                data: {
-                  name: input.contact?.name?.trim(),
-                  phone: input.contact?.phone,
-                  idCard: input.contact?.idCard,
-                  address: input.contact?.address,
-                  licensePlate: input.contact?.licensePlate,
-                },
-              });
-              contactId = createdContact.id; // ไม่ error แล้ว
+              roomContactId = (
+                await this.prisma.roomContact.create({
+                  data: {
+                    name: input.contact?.name,
+                    phone: input.contact?.phone,
+                    idCard: input.contact?.idCard,
+                    address: input.contact?.address,
+                    licensePlate: input.contact?.licensePlate,
+                  },
+                })
+              ).id;
             }
+          } else {
+            roomContactId = null;
           }
-          if (input.company) {
+          if (input.company && input.type === typeRoom.legalEntity) {
             let name = false;
             if (input.company?.name) {
               const checkName = await this.prisma.roomCompany.findFirst({
                 where: {
                   name: input.company.name.trim(),
-                  idTax: input.company.idTax.trim(),
                 },
               });
               if (checkName) {
-                companyId = checkName.id;
+                roomCompanyId = checkName.id;
                 name = true;
               }
             }
             if (!name) {
-              const createdCompany = await this.prisma.roomCompany.create({
+              roomCompanyId = (
+                await this.prisma.roomCompany.create({
+                  data: {
+                    name: input.company?.name,
+                    phone: input.company?.phone,
+                    idTax: input.company?.idTax,
+                    address: input.company?.address,
+                  },
+                })
+              ).id;
+            }
+          } else {
+            roomCompanyId = null;
+          }
+          if (value.rent.length > 0) {
+            await this.prisma.rent.deleteMany({
+              where: {
+                roomId: checkNameRoom.id,
+              },
+            });
+            for (const rent of value.rent) {
+              await this.prisma.rent.create({
                 data: {
-                  name: input.company?.name?.trim(),
-                  phone: input.company?.phone,
-                  idTax: input.company?.idTax,
-                  address: input.company?.address,
+                  roomId: checkNameRoom.id,
+                  name: rent.name,
+                  price: rent.price,
                 },
               });
-              companyId = createdCompany.id;
             }
           }
-          if (contactId || companyId) {
-            await this.prisma.room.update({
-              where: { id: result.id },
-              data: { roomContactId: contactId, roomCompanyId: companyId },
+          if (value.serviceFee.length > 0) {
+            await this.prisma.serviceFee.deleteMany({
+              where: {
+                roomId: checkNameRoom.id,
+              },
             });
+            for (const serviceFee of value.serviceFee) {
+              await this.prisma.serviceFee.create({
+                data: {
+                  roomId: checkNameRoom.id,
+                  name: serviceFee.name,
+                  price: serviceFee.price,
+                },
+              });
+            }
           }
+          if (value.other.length > 0) {
+            await this.prisma.serviceOther.deleteMany({
+              where: {
+                roomId: checkNameRoom.id,
+              },
+            });
+            for (const other of value.other) {
+              await this.prisma.serviceOther.create({
+                data: {
+                  roomId: checkNameRoom.id,
+                  name: other.name,
+                  price: other.price,
+                },
+              });
+            }
+          }
+          if (input.type !== checkNameRoom.type) {
+            if (checkNameRoom.roomCompanyId) {
+              await this.prisma.roomCompany.delete({
+                where: { id: checkNameRoom.roomCompanyId },
+              });
+              await this.prisma.room.update({
+                where: { id: checkNameRoom.id },
+                data: {
+                  roomCompanyId: null,
+                },
+              });
+            }
+          }
+          const result = await this.prisma.room.update({
+            where: {
+              id: checkNameRoom.id,
+            },
+            data: {
+              nameRoom: value.nameRoom,
+              type: input.type,
+              status: value.status,
+              dateOfStay: value.dateOfStay
+                ? dayjs(value.dateOfStay).toDate()
+                : null,
+              issueDate: value.issueDate
+                ? dayjs(value.issueDate).toDate()
+                : null,
+              roomContactId: roomContactId,
+              roomCompanyId: roomCompanyId,
+              updatedAt: dayjs().toDate(),
+            },
+          });
+
+          if (value.status !== statusRoom.blank) {
+            /** add transaction checkin */
+            if (value.dateOfStay) {
+              if (
+                result.dateOfStay &&
+                dayjs(result.dateOfStay).format("YYYY-MM-DD").valueOf() !==
+                  dayjs(value.dateOfStay).format("YYYY-MM-DD").valueOf()
+              ) {
+                await this.prisma.transactionCheckIn.create({
+                  data: {
+                    roomId: result.id,
+                    date: dayjs(value.dateOfStay).toDate(),
+                  },
+                });
+              }
+            }
+            /** add transaction checkout */
+            if (value.issueDate) {
+              if (
+                result.issueDate &&
+                dayjs(result.issueDate).format("YYYY-MM-DD").valueOf() !==
+                  dayjs(value.issueDate).format("YYYY-MM-DD").valueOf()
+              ) {
+                await this.prisma.transactionCheckOut.create({
+                  data: {
+                    roomId: result.id,
+                    date: dayjs(value.issueDate).toDate(),
+                  },
+                });
+              }
+            }
+          } else {
+            const check = await this.prisma.transactionBlank.findFirst({
+              where: {
+                roomId: result.id,
+                date: {
+                  gte: dayjs().startOf("months").toDate(),
+                  lte: dayjs().endOf("months").toDate(),
+                },
+              },
+            });
+            if (!check) {
+              /** add transaction blank */
+              await this.prisma.transactionBlank.create({
+                data: {
+                  roomId: result.id,
+                  date: dayjs().toDate(),
+                },
+              });
+            }
+          }
+
           response.push(result.id);
+        } else {
+          const created: Prisma.roomCreateArgs = {
+            data: {
+              nameRoom: value.nameRoom,
+              type: input.type,
+              status: value.status,
+              dateOfStay: value?.dateOfStay
+                ? dayjs(value.dateOfStay).toDate()
+                : null,
+              issueDate: value?.issueDate
+                ? dayjs(value.issueDate).toDate()
+                : null,
+              rent:
+                value.rent && value.rent.length > 0
+                  ? {
+                      createMany: {
+                        data: value.rent,
+                      },
+                    }
+                  : undefined,
+
+              serviceFee:
+                value.serviceFee && value.serviceFee.length > 0
+                  ? {
+                      createMany: {
+                        data: value.serviceFee,
+                      },
+                    }
+                  : undefined,
+              serviceOther:
+                value.other && value.other.length > 0
+                  ? {
+                      createMany: {
+                        data: value.other,
+                      },
+                    }
+                  : undefined,
+            },
+            select: {
+              id: true,
+            },
+          };
+          const result = await this.prisma.room
+            .create(created)
+            .catch((error) => {
+              this.logger.error(error);
+              throw new HttpException(
+                `สร้างข้อมูลไม่สำเร็จ`,
+                HttpStatus.BAD_REQUEST
+              );
+            });
+          if (result) {
+            let contactId: number | null = null; // แก้ให้สามารถเป็น null ได้
+            let companyId: number | null = null; // แก้ให้สามารถเป็น null ได้
+            if (input.contact) {
+              let name = false;
+              if (input.contact?.name) {
+                const checkName = await this.prisma.roomContact.findFirst({
+                  where: {
+                    name: input.contact.name.trim(),
+                  },
+                });
+                if (checkName) {
+                  contactId = checkName.id;
+                  name = true;
+                }
+              }
+              if (!name) {
+                const createdContact = await this.prisma.roomContact.create({
+                  data: {
+                    name: input.contact?.name?.trim(),
+                    phone: input.contact?.phone,
+                    idCard: input.contact?.idCard,
+                    address: input.contact?.address,
+                    licensePlate: input.contact?.licensePlate,
+                  },
+                });
+                contactId = createdContact.id; // ไม่ error แล้ว
+              }
+            }
+            if (input.company) {
+              let name = false;
+              if (input.company?.name) {
+                const checkName = await this.prisma.roomCompany.findFirst({
+                  where: {
+                    name: input.company.name.trim(),
+                    idTax: input.company.idTax.trim(),
+                  },
+                });
+                if (checkName) {
+                  companyId = checkName.id;
+                  name = true;
+                }
+              }
+              if (!name) {
+                const createdCompany = await this.prisma.roomCompany.create({
+                  data: {
+                    name: input.company?.name?.trim(),
+                    phone: input.company?.phone,
+                    idTax: input.company?.idTax,
+                    address: input.company?.address,
+                  },
+                });
+                companyId = createdCompany.id;
+              }
+            }
+            if (contactId || companyId) {
+              await this.prisma.room.update({
+                where: { id: result.id },
+                data: { roomContactId: contactId, roomCompanyId: companyId },
+              });
+            }
+
+            if (value.status !== statusRoom.blank) {
+              /** add transaction checkin */
+              if (value.dateOfStay) {
+                await this.prisma.transactionCheckIn.create({
+                  data: {
+                    roomId: result.id,
+                    date: dayjs(value.dateOfStay).toDate(),
+                  },
+                });
+              }
+              /** add transaction checkout */
+              if (value.issueDate) {
+                await this.prisma.transactionCheckOut.create({
+                  data: {
+                    roomId: result.id,
+                    date: dayjs(value.issueDate).toDate(),
+                  },
+                });
+              }
+            } else {
+              const check = await this.prisma.transactionBlank.findFirst({
+                where: {
+                  roomId: result.id,
+                  date: {
+                    gte: dayjs().startOf("months").toDate(),
+                    lte: dayjs().endOf("months").toDate(),
+                  },
+                },
+              });
+              if (!check) {
+                /** add transaction blank */
+                await this.prisma.transactionBlank.create({
+                  data: {
+                    roomId: result.id,
+                    date: dayjs().toDate(),
+                  },
+                });
+              }
+            }
+            response.push(result.id);
+          }
         }
       }
 
@@ -307,9 +540,7 @@ export class RoomService {
         throw new HttpException(
           `ไม่สามารถอัพเดทข้อมูลได้ เนื่องจากห้อง (${
             checkRoom.nameRoom
-          }) ค้างค่าเช่าเดือน : ${dayjs(
-            `${checkBill.year}-${checkBill.month}`
-          )
+          }) ค้างค่าเช่าเดือน : ${dayjs(`${checkBill.year}-${checkBill.month}`)
             .locale("th")
             .format("MMM BBBB")}`,
           HttpStatus.BAD_REQUEST
@@ -569,6 +800,59 @@ export class RoomService {
           updatedAt: dayjs().toDate(),
         },
       });
+
+      if (input.status !== statusRoom.blank) {
+        /** add transaction checkin */
+        if (input.dateOfStay) {
+          if (
+            result.dateOfStay &&
+            dayjs(result.dateOfStay).format("YYYY-MM-DD").valueOf() !==
+              dayjs(input.dateOfStay).format("YYYY-MM-DD").valueOf()
+          ) {
+            await this.prisma.transactionCheckIn.create({
+              data: {
+                roomId: result.id,
+                date: dayjs(input.dateOfStay).toDate(),
+              },
+            });
+          }
+        }
+        /** add transaction checkout */
+        if (input.issueDate) {
+          if (
+            result.issueDate &&
+            dayjs(result.issueDate).format("YYYY-MM-DD").valueOf() !==
+              dayjs(input.issueDate).format("YYYY-MM-DD").valueOf()
+          ) {
+            await this.prisma.transactionCheckOut.create({
+              data: {
+                roomId: result.id,
+                date: dayjs(input.issueDate).toDate(),
+              },
+            });
+          }
+        }
+      } else {
+        const check = await this.prisma.transactionBlank.findFirst({
+          where: {
+            roomId: result.id,
+            date: {
+              gte: dayjs().startOf("months").toDate(),
+              lte: dayjs().endOf("months").toDate(),
+            },
+          },
+        });
+        if (!check) {
+          /** add transaction blank */
+          await this.prisma.transactionBlank.create({
+            data: {
+              roomId: result.id,
+              date: dayjs().toDate(),
+            },
+          });
+        }
+      }
+
       return {
         id: result.id,
       };

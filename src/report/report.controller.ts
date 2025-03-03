@@ -52,32 +52,87 @@ export class ReportController {
     }
   }
 
-  // @Post("checkin")
-  // async generateCheckinExcel(
-  //   @Res() res: Response,
-  //   @Body()
-  //   input: {
-  //     year: number;
-  //     month: number;
-  //   }
-  // ) {
-  //   try {
-  //     const excelFile = await this.reportService.generateCheckinExcel(
-  //       input.year,
-  //       input.month
-  //     );
-  //     const filename =
-  //       "report-rent-" + dayjs().format("YYYY-MM-DD-HH-mm-ss") + ".xlsx";
-  //     res.set({
-  //       "Content-Type":
-  //         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  //       "Content-Disposition": `attachment; filename="${filename}"`,
-  //     });
-  //     res.send(excelFile);
-  //   } catch (error) {
-  //     throw new HttpException(error?.message, HttpStatus.BAD_REQUEST);
-  //   }
-  // }
+  @Post("checkin")
+  async generateCheckinExcel(
+    @Res() res: Response,
+    @Body()
+    input: {
+      year: number;
+      month: number;
+    }
+  ) {
+    try {
+      const excelFile = await this.reportService.generateCheckinExcel(
+        input.year,
+        input.month
+      );
+      const filename =
+        "report-checkin-" + dayjs().format("YYYY-MM-DD-HH-mm-ss") + ".xlsx";
+      res.set({
+        "Content-Type":
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+      });
+      res.send(excelFile);
+    } catch (error) {
+      throw new HttpException(error?.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  @Post("checkout")
+  async generateCheckoutExcel(
+    @Res() res: Response,
+    @Body()
+    input: {
+      year: number;
+      month: number;
+    }
+  ) {
+    try {
+      const excelFile = await this.reportService.generateCheckoutExcel(
+        input.year,
+        input.month
+      );
+      const filename =
+        "report-checkout-" + dayjs().format("YYYY-MM-DD-HH-mm-ss") + ".xlsx";
+      res.set({
+        "Content-Type":
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+      });
+      res.send(excelFile);
+    } catch (error) {
+      throw new HttpException(error?.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  @Post("blank")
+  async generateBlankExcel(
+    @Res() res: Response,
+    @Body()
+    input: {
+      year: number;
+      month: number;
+    }
+  ) {
+    try {
+      const excelFile = await this.reportService.generateBlankExcel(
+        input.year,
+        input.month
+      );
+      const filename =
+        "report-blank-" + dayjs().format("YYYY-MM-DD-HH-mm-ss") + ".xlsx";
+      res.set({
+        "Content-Type":
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+      });
+      res.send(excelFile);
+    } catch (error) {
+      throw new HttpException(error?.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
 
   @Post("electricity")
   async generateElectricityExcel(
