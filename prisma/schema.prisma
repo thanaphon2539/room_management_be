@@ -183,6 +183,7 @@ model transactionBill {
   room       room       @relation(fields: [roomId], references: [id], onDelete: Cascade)
   month      Int
   year       Int
+  rentTotal  String     @default("0")
   totalNoVat String
   itemNoVat  String
   itemVat    String

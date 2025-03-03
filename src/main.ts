@@ -6,7 +6,12 @@ import { ValidationPipe } from "@nestjs/common";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    cors: true,
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+      exposedHeaders: ["Content-Disposition"], // ✅ เพิ่ม headers ที่ต้องการให้ Axios อ่าน
+    },
   });
   app.useGlobalPipes(
     new ValidationPipe({
