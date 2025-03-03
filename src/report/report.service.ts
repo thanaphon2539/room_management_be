@@ -148,7 +148,7 @@ export class ReportService {
       }
 
       /** รวม */
-      worksheet.addRow([`รวม`, `${i} ห้อง`]);
+      worksheet.addRow([`รวม`, `${i-1} ห้อง`]);
 
       // Set column widths
       worksheet.columns = [
@@ -223,7 +223,7 @@ export class ReportService {
       }
 
       /** รวม */
-      worksheet.addRow([`รวม`, `${i} ห้อง`]);
+      worksheet.addRow([`รวม`, `${i-1} ห้อง`]);
 
       // Set column widths
       worksheet.columns = [
@@ -286,7 +286,7 @@ export class ReportService {
       }
 
       /** รวม */
-      worksheet.addRow([`รวม`, `${i} ห้อง`]);
+      worksheet.addRow([`รวม`, `${i-1} ห้อง`]);
 
       // Set column widths
       worksheet.columns = [
