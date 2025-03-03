@@ -6,4 +6,5 @@ export class CreateBillDto {
   year: number;
   month: number;
   typeBill?: typeBill;
+  date: string;
 }

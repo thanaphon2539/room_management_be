@@ -334,7 +334,7 @@ export function templateReceipt(
         }</strong></p>
         <p>เลขที่(ID) RCE${data.numberBill}</p>
         <p>รอบบิล(Date) ${input.month}/${input.year}</p>
-        <p>วันที่ออก(Date) ${dayjs().format("DD/MM/YYYY")}</p>
+        <p>วันที่ออก(Date) ${dayjs(input.date).format("DD/MM/YYYY")}</p>
         <p>ห้อง(Room) ${data.room.nameRoom}</p>
         <p>พนักงาน(Staff) ${userName}</p>
       </div>
@@ -767,7 +767,7 @@ export function templateReceipts(
           <div>
             <br>
             <p><strong>เลขที่:</strong> REC${data.numberBill}</p>
-            <p><strong>วันที่:</strong> ${dayjs()
+            <p><strong>วันที่:</strong> ${dayjs(input.date)
               .locale("th")
               .format("DD/MM/BBBB")}</p>
             <p><strong>เดือน:</strong> ${dayjs(`${input.year}-${input.month}`)
