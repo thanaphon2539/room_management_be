@@ -542,7 +542,7 @@ export class RoomService {
             checkRoom.nameRoom
           }) ค้างค่าเช่าเดือน : ${dayjs(`${checkBill.year}-${checkBill.month}`)
             .locale("th")
-            .format("MMM BBBB")}`,
+            .format("MMM YYYY")}`,
           HttpStatus.BAD_REQUEST
         );
       }
@@ -603,55 +603,80 @@ export class RoomService {
         }
       }
       if (input.company && input.type === typeRoom.legalEntity) {
-        if (input.company.id) {
-          const checkRoomCompany = await this.prisma.roomCompany.findFirst({
-            where: { id: input.company.id },
+        // if (input.company.id) {
+        //   const checkRoomCompany = await this.prisma.roomCompany.findFirst({
+        //     where: { id: input.company.id },
+        //   });
+        //   if (!checkRoomCompany) {
+        //     throw new HttpException(
+        //       `ไม่พบข้อมูลบริษัทที่ต้องการแก้ไข`,
+        //       HttpStatus.BAD_REQUEST
+        //     );
+        //   }
+        //   roomCompanyId = (
+        //     await this.prisma.roomCompany.update({
+        //       where: {
+        //         id: checkRoomCompany.id,
+        //       },
+        //       data: {
+        //         name: input.company?.name?.trim(),
+        //         phone: input.company?.phone,
+        //         idTax: input.company?.idTax,
+        //         address: input.company?.address,
+        //         updatedAt: dayjs().toDate(),
+        //       },
+        //     })
+        //   ).id;
+        // } else {
+        //   let name = false;
+        //   if (input.company?.name) {
+        //     const checkName = await this.prisma.roomCompany.findFirst({
+        //       where: {
+        //         name: input.company.name.trim(),
+        //       },
+        //     });
+        //     if (checkName) {
+        //       roomCompanyId = checkName.id;
+        //       name = true;
+        //     }
+        //   }
+        //   if (!name) {
+        //     roomCompanyId = (
+        //       await this.prisma.roomCompany.create({
+        //         data: {
+        //           name: input.company?.name,
+        //           phone: input.company?.phone,
+        //           idTax: input.company?.idTax,
+        //           address: input.company?.address,
+        //         },
+        //       })
+        //     ).id;
+        //   }
+        // }
+        let name = false;
+        if (input.company?.name) {
+          console.log(input.company?.name);
+          const checkName = await this.prisma.roomCompany.findFirst({
+            where: {
+              name: input.company.name.trim(),
+            },
           });
-          if (!checkRoomCompany) {
-            throw new HttpException(
-              `ไม่พบข้อมูลบริษัทที่ต้องการแก้ไข`,
-              HttpStatus.BAD_REQUEST
-            );
+          if (checkName) {
+            roomCompanyId = checkName.id;
+            name = true;
           }
+        }
+        if (!name) {
           roomCompanyId = (
-            await this.prisma.roomCompany.update({
-              where: {
-                id: checkRoomCompany.id,
-              },
+            await this.prisma.roomCompany.create({
               data: {
-                name: input.company?.name?.trim(),
+                name: input.company?.name.trim(),
                 phone: input.company?.phone,
                 idTax: input.company?.idTax,
                 address: input.company?.address,
-                updatedAt: dayjs().toDate(),
               },
             })
           ).id;
-        } else {
-          let name = false;
-          if (input.company?.name) {
-            const checkName = await this.prisma.roomCompany.findFirst({
-              where: {
-                name: input.company.name.trim(),
-              },
-            });
-            if (checkName) {
-              roomCompanyId = checkName.id;
-              name = true;
-            }
-          }
-          if (!name) {
-            roomCompanyId = (
-              await this.prisma.roomCompany.create({
-                data: {
-                  name: input.company?.name,
-                  phone: input.company?.phone,
-                  idTax: input.company?.idTax,
-                  address: input.company?.address,
-                },
-              })
-            ).id;
-          }
         }
       } else {
         roomCompanyId = null;
@@ -772,9 +797,16 @@ export class RoomService {
       }
       if (input.type !== checkRoom.type) {
         if (checkRoom.roomCompanyId) {
-          await this.prisma.roomCompany.delete({
-            where: { id: checkRoom.roomCompanyId },
+          const checkRoomCompany = await this.prisma.room.findMany({
+            where: {
+              id: { not: id },
+            },
           });
+          if (checkRoomCompany?.length === 0) {
+            await this.prisma.roomCompany.delete({
+              where: { id: checkRoom.roomCompanyId },
+            });
+          }
           await this.prisma.room.update({
             where: { id: id },
             data: {
@@ -832,6 +864,21 @@ export class RoomService {
             });
           }
         }
+        const check = await this.prisma.transactionBlank.findFirst({
+          where: {
+            roomId: result.id,
+            date: {
+              gte: dayjs().startOf("months").toDate(),
+              lte: dayjs().endOf("months").toDate(),
+            },
+          },
+        });
+        if (check) {
+          /** add transaction blank */
+          await this.prisma.transactionBlank.delete({
+            where: { id: check.id },
+          });
+        }
       } else {
         const check = await this.prisma.transactionBlank.findFirst({
           where: {
@@ -859,7 +906,7 @@ export class RoomService {
     } catch (error) {
       this.logger.error(error);
       throw new HttpException(
-        `ไม่สามารถอัพเดทข้อมูลได้`,
+        error?.message || `ไม่สามารถอัพเดทข้อมูลได้`,
         HttpStatus.BAD_REQUEST
       );
     }
@@ -895,6 +942,16 @@ export class RoomService {
       if (type === typeRoomWaterAndElectricity.electricityUnit) {
         tbName = "transactionElectricityUnit";
       }
+      const dateBefor = dayjs(`${input[0].year}-${input[0].month}`)
+        .add(-1, "months")
+        .format("YYYY-MM")
+        .split("-");
+      const checkBill = await this.prisma[tbName].findMany({
+        where: {
+          year: Number(dateBefor[0]),
+          month: Number(dateBefor[1]),
+        },
+      });
       // console.log("tbName >>>", tbName);
       for (const room of input) {
         const checkroom = await this.prisma.room.findFirst({
@@ -911,6 +968,8 @@ export class RoomService {
               HttpStatus.BAD_REQUEST
             );
           }
+          const unitBefor =
+            checkBill.find((el) => el.roomId === room.roomId)?.unitAfter || 0;
           const check = await this.prisma[tbName].findFirst({
             where: {
               roomId: room.roomId,
@@ -920,14 +979,20 @@ export class RoomService {
           });
           if (!check) {
             await this.prisma[tbName].create({
-              data: room,
+              data: {
+                ...room,
+                unitBefor: unitBefor,
+              },
             });
           } else {
             await this.prisma[tbName].update({
               where: {
                 id: check.id,
               },
-              data: room,
+              data: {
+                ...room,
+                unitBefor: unitBefor,
+              },
             });
           }
         }
@@ -1064,6 +1129,28 @@ export class RoomService {
           unitAfter: unitAfter,
         };
       });
+    } catch (error) {
+      this.logger.error(error);
+      throw new HttpException(error?.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async seedRoomBlank() {
+    try {
+      const roomList = await this.prisma.room.findMany({
+        where: {
+          status: statusRoom.blank,
+        },
+      });
+      for (const value of roomList) {
+        await this.prisma.transactionBlank.create({
+          data: {
+            roomId: value.id,
+            date: dayjs().toDate(),
+          },
+        });
+      }
+      return "OK";
     } catch (error) {
       this.logger.error(error);
       throw new HttpException(error?.message, HttpStatus.BAD_REQUEST);

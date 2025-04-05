@@ -3,7 +3,13 @@ import { CreateBillDto } from "./dto/create-bill.dto";
 import { UpdateBillDto } from "./dto/update-bill.dto";
 import { PrismaService } from "src/prisma/prisma.service";
 import { FilterBillDto } from "./dto/filter-bill.dto";
-import { room, statusBill, typeBill, typeRoom } from "@prisma/client";
+import {
+  room,
+  statusBill,
+  statusRoom,
+  typeBill,
+  typeRoom,
+} from "@prisma/client";
 import dayjs from "dayjs";
 import _ from "lodash";
 import path from "path";
@@ -24,11 +30,15 @@ import {
   ResponseReceiptBill,
 } from "./entities/bill.entity";
 import { Request, Response } from "express";
+import { SettingService } from "src/setting/setting.service";
 
 @Injectable()
 export class BillService {
   private readonly logger: Logger;
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly settingService: SettingService
+  ) {
     this.logger = new Logger(BillService.name);
   }
 
@@ -226,8 +236,10 @@ export class BillService {
           summary.total +=
             rent + service + waterTotal + electricityTotal + otherFee;
           roomDetail.push({
-            building: value?.nameRoom.slice(0, 1),
-            roomNumber: value?.nameRoom.slice(1),
+            // building: value?.nameRoom.slice(0, 1),
+            // roomNumber: value?.nameRoom.slice(1),
+            building: value?.nameRoom,
+            roomNumber: value?.nameRoom,
             rent: rent,
             service: service,
             commonFee: commonFee,
@@ -249,6 +261,7 @@ export class BillService {
             total: (
               rent +
               service +
+              commonFee +
               waterTotal +
               electricityTotal +
               otherFee
@@ -603,6 +616,7 @@ export class BillService {
                 .endOf("months")
                 .toDate(),
             },
+            status: statusRoom.busy,
           },
           include: {
             roomContact: true,
@@ -629,6 +643,7 @@ export class BillService {
                 .toDate(),
             },
             roomCompanyId: { not: null },
+            status: statusRoom.busy,
           },
           include: {
             roomContact: true,
@@ -664,21 +679,34 @@ export class BillService {
         await this.prisma.settingContactAddress.findFirst();
       const settingBillUnit = await this.prisma.settingBillUnit.findFirst();
       /** findbill */
-      const countReceipt = await this.prisma.transactionBill.findFirst({
+      // const countReceipt = await this.prisma.transactionBill.findFirst({
+      //   where: {
+      //     type: input.typeBill,
+      //     year: input.year,
+      //     month: input.month,
+      //   },
+      //   orderBy: {
+      //     number: "desc",
+      //   },
+      // });
+      // let numberBill = `${dayjs().format("YYYYMM")}0001`;
+      // if (countReceipt) {
+      //   numberBill = `${(Number(countReceipt.number) + 1).toString()}`;
+      // }
+      const prefix_date = `${input.year}${
+        input.month < 9 ? "0" + input.month : input.month
+      }`;
+      const dataRunning = await this.prisma.runningNumber.findFirst({
         where: {
-          type: input.typeBill,
-          year: input.year,
-          month: input.month,
-        },
-        orderBy: {
-          number: "desc",
+          type: input.typeBill === typeBill.receipt ? 2 : 1,
+          date: dayjs().format("YYYY-MM-DD"),
         },
       });
-
-      let numberBill = `${dayjs().format("YYYYMM")}0001`;
-      if (countReceipt) {
-        numberBill = `${(Number(countReceipt.number) + 1).toString()}`;
-      }
+      const running = this.settingService.getRunningNumber(dataRunning?.number);
+      let numberBill = `${prefix_date}${await this.settingService.zeroFill(
+        running,
+        4
+      )}`;
       const nameRoom = input.nameRoom.split(",");
       const room = await this.prisma.room.findMany({
         where: {
@@ -736,6 +764,12 @@ export class BillService {
           numberBill: result.numberBill,
         });
       }
+      /** insert update */
+      await this.settingService.runningNumber(
+        2,
+        running,
+        dataRunning ? dataRunning.id : 0
+      );
       return {
         ...newObj,
         data: _.orderBy(newObj["data"], "nameRoom", "asc"),
@@ -890,6 +924,9 @@ export class BillService {
           let unitPrice = el.price;
           if (el.name.includes("ค่าน้ำ") || el.name.includes("ค่าไฟ")) {
             name = `${el.name} เดือน: ${monthAgo[1]}/${monthAgo[0]}`;
+            if (input.type === typeRoom.person) {
+              name = `${el.name} เดือน: ${monthAgo[1]}/${monthAgo[0]} (${el.unitAfter} - ${el.unitBefor} = ${el.qty} ยูนิต)`;
+            }
             qty = el?.qty;
             unitPrice = el?.unitPrice;
           }
@@ -1011,23 +1048,57 @@ export class BillService {
       const userName = req?.user?.name || "admin";
       const browser = await puppeteer.launch();
       const page = await browser.newPage();
-      const htmlContent =
-        input.type === typeRoom.person
-          ? templateInvoice(data, input, userName, copy)
-          : templateInvoices(data, input, userName, copy);
+      const htmlContent = `
+        ${templateInvoice(data, input, userName, false)}
+        <div style="page-break-before: always;"></div>
+        ${templateInvoice(data, input, userName, true)}
+      `;
+
       await page.setContent(htmlContent, { waitUntil: "networkidle0" });
-      const prefix = copy ? `invoice-copy` : `invoice`;
+
+      const prefix = `invoice`;
       const filename = `${prefix}-${
         data.room.customerName || "customerName"
       }-${dayjs().format("YYYY-MM-DD-HH-mm")}.pdf`;
       const pdfPath = path.join(__dirname, `../../../public/${filename}`);
-      await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
+
+      await page.pdf({
+        path: pdfPath,
+        format: "A4",
+        printBackground: true,
+        displayHeaderFooter: true,
+        headerTemplate: `<div style="font-size:14px; text-align:center; width:100%;"></div>`,
+        footerTemplate: `<div style="font-size:10px; text-align:center; width:100%;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>`,
+        margin: { top: "50px", bottom: "50px" },
+      });
 
       await browser.close();
+
       return {
         pdfPath,
         filename,
       };
+
+      // const userName = req?.user?.name || "admin";
+      // const browser = await puppeteer.launch();
+      // const page = await browser.newPage();
+      // const htmlContent =
+      //   input.type === typeRoom.person
+      //     ? templateInvoice(data, input, userName, copy)
+      //     : templateInvoices(data, input, userName, copy);
+      // await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+      // const prefix = copy ? `invoice-copy` : `invoice`;
+      // const filename = `${prefix}-${dayjs().format("YYYY-MM-DD-HH-mm")}-${
+      //   input.nameRoom
+      // }.pdf`;
+      // const pdfPath = path.join(__dirname, `../../../public/${filename}`);
+      // await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
+
+      // await browser.close();
+      // return {
+      //   pdfPath,
+      //   filename,
+      // };
     } catch (error) {
       this.logger.error("generateInvoice error >>>", error);
       throw new HttpException(
@@ -1049,23 +1120,58 @@ export class BillService {
       const userName = req?.user?.name || "admin";
       const browser = await puppeteer.launch();
       const page = await browser.newPage();
-      const htmlContent =
-        input.type === typeRoom.person
-          ? templateReceipt(data, input, userName, copy)
-          : templateReceipts(data, input, userName, copy);
+
+      const htmlContent = `
+        ${templateReceipt(data, input, userName, false)}
+        <div style="page-break-before: always;"></div>
+        ${templateReceipt(data, input, userName, true)}
+      `;
+
       await page.setContent(htmlContent, { waitUntil: "networkidle0" });
-      const prefix = copy ? `receipt-copy` : `receipt`;
+
+      const prefix = `receipt`;
       const filename = `${prefix}-${
         data.room.customerName || "customerName"
       }-${dayjs().format("YYYY-MM-DD-HH-mm")}.pdf`;
       const pdfPath = path.join(__dirname, `../../../public/${filename}`);
-      await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
+
+      await page.pdf({
+        path: pdfPath,
+        format: "A4",
+        printBackground: true,
+        displayHeaderFooter: true,
+        headerTemplate: `<div style="font-size:14px; text-align:center; width:100%;"></div>`,
+        footerTemplate: `<div style="font-size:10px; text-align:center; width:100%;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>`,
+        margin: { top: "50px", bottom: "50px" },
+      });
 
       await browser.close();
+
       return {
         pdfPath,
         filename,
       };
+
+      // const userName = req?.user?.name || "admin";
+      // const browser = await puppeteer.launch();
+      // const page = await browser.newPage();
+      // const htmlContent =
+      //   input.type === typeRoom.person
+      //     ? templateReceipt(data, input, userName, copy)
+      //     : templateReceipts(data, input, userName, copy);
+      // await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+      // const prefix = copy ? `receipt-copy` : `receipt`;
+      // const filename = `${prefix}-${dayjs().format("YYYY-MM-DD-HH-mm")}-${
+      //   input.nameRoom
+      // }.pdf`;
+      // const pdfPath = path.join(__dirname, `../../../public/${filename}`);
+      // await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
+
+      // await browser.close();
+      // return {
+      //   pdfPath,
+      //   filename,
+      // };
     } catch (error) {
       this.logger.error("generateReceipt error >>>", error);
       throw new HttpException(

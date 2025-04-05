@@ -47,7 +47,9 @@ export class RoomController {
   }
 
   @Get("electricityunit")
-  findElectricityUnit(@Query() input: FilterRoomWaterUnitAndElectricityUnitDto) {
+  findElectricityUnit(
+    @Query() input: FilterRoomWaterUnitAndElectricityUnitDto
+  ) {
     return this.roomService.findElectricityUnit(input);
   }
 
@@ -89,5 +91,10 @@ export class RoomController {
   @Delete(":id")
   remove(@Param("id") id: string) {
     return this.roomService.remove(+id);
+  }
+
+  @Post("seed/blank")
+  seedRoomBlank() {
+    return this.roomService.seedRoomBlank();
   }
 }

@@ -129,7 +129,7 @@ export class ReportService {
       const worksheet = workbook.addWorksheet("My Sheet");
 
       // Add header row
-      worksheet.addRow(["รายงานบิลค่าเช่ารายเดือน"]);
+      worksheet.addRow(["รายงานย้ายเข้ารายเดือน"]);
       worksheet.addRow(["กรองข้องมูล", `ปี ${year}`, `เดือน ${month}`]);
       worksheet.addRow([]);
       worksheet.addRow(["ลำดับ", "ห้อง", "ประเภท", "ข้อมูลผู้ติดต่อ"]);
@@ -148,7 +148,7 @@ export class ReportService {
       }
 
       /** รวม */
-      worksheet.addRow([`รวม`, `${i-1} ห้อง`]);
+      worksheet.addRow([`รวม`, `${i - 1} ห้อง`]);
 
       // Set column widths
       worksheet.columns = [
@@ -192,7 +192,7 @@ export class ReportService {
       const worksheet = workbook.addWorksheet("My Sheet");
 
       // Add header row
-      worksheet.addRow(["รายงานบิลค่าเช่ารายเดือน"]);
+      worksheet.addRow(["รายงานย้ายออกรายเดือน"]);
       worksheet.addRow(["กรองข้องมูล", `ปี ${year}`, `เดือน ${month}`]);
       worksheet.addRow([]);
       worksheet.addRow([
@@ -223,7 +223,7 @@ export class ReportService {
       }
 
       /** รวม */
-      worksheet.addRow([`รวม`, `${i-1} ห้อง`]);
+      worksheet.addRow([`รวม`, `${i - 1} ห้อง`]);
 
       // Set column widths
       worksheet.columns = [
@@ -267,7 +267,7 @@ export class ReportService {
       const worksheet = workbook.addWorksheet("My Sheet");
 
       // Add header row
-      worksheet.addRow(["รายงานบิลค่าเช่ารายเดือน"]);
+      worksheet.addRow(["รายงานห้องว่างรายเดือน"]);
       worksheet.addRow(["กรองข้องมูล", `ปี ${year}`, `เดือน ${month}`]);
       worksheet.addRow([]);
       worksheet.addRow(["ลำดับ", "ห้อง", "ประเภท", "ข้อมูลผู้ติดต่อ"]);
@@ -286,7 +286,7 @@ export class ReportService {
       }
 
       /** รวม */
-      worksheet.addRow([`รวม`, `${i-1} ห้อง`]);
+      worksheet.addRow([`รวม`, `${i - 1} ห้อง`]);
 
       // Set column widths
       worksheet.columns = [
@@ -324,12 +324,18 @@ export class ReportService {
             },
           },
         },
+        orderBy: {
+          room: {
+            nameRoom: "asc",
+          },
+        },
       });
+      // console.log("data >>>", data);
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("My Sheet");
 
       // Add header row
-      worksheet.addRow(["รายงานบิลค่าเช่ารายเดือน"]);
+      worksheet.addRow(["รายงานการใช้ไฟ"]);
       worksheet.addRow(["กรองข้องมูล", `ปี ${year}`, `เดือน ${month}`]);
       worksheet.addRow([]);
       worksheet.addRow([
@@ -345,13 +351,13 @@ export class ReportService {
 
       // Add data rows
       let i = 1;
-      let type = `บุคคล`;
       let unitBeforTotal = 0;
       let unitAfterTotal = 0;
       let unitTotal = 0;
       let priceTotal = 0;
       for (const value of data) {
         let customer = value.room?.roomContact?.name;
+        let type = `บุคคล`;
         if (value.room.type === typeRoom.legalEntity) {
           type = `นิติบุคคล`;
           customer = value.room?.roomCompany?.name;
@@ -424,6 +430,11 @@ export class ReportService {
             },
           },
         },
+        orderBy: {
+          room: {
+            nameRoom: "asc",
+          },
+        },
       });
       // console.log("data >>>", data);
       const workbook = new ExcelJS.Workbook();
@@ -453,6 +464,7 @@ export class ReportService {
       let priceTotal = 0;
       for (const value of data) {
         let customer = value.room?.roomContact?.name;
+        let type = `บุคคล`;
         if (value.room.type === typeRoom.legalEntity) {
           type = `นิติบุคคล`;
           customer = value.room?.roomCompany?.name;

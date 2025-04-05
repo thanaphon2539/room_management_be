@@ -120,6 +120,8 @@ export function templateInvoice(
         <p>โทร. ${data.company?.phone} / อีเมล. ${data.company?.email}</p>
         <p><strong>ลูกค้า(Customer)</strong></p>
         <p>${data.room.customerName}</p>
+        <p>${data.room.customerAddress}</p>
+        <p>เลขบัตรประชาชน: ${data.room.customerIdTax}</p>
       </div>
       <div class="info right">
         <p><strong>${
@@ -127,7 +129,11 @@ export function templateInvoice(
         }</strong></p>
         <p>เลขที่(ID) INV${data.numberBill}</p>
         <p>รอบบิล(Date) ${input.month}/${input.year}</p>
-        <p>วันที่ออก(Date) ${dayjs().format("DD/MM/YYYY")}</p>
+        <p>วันที่ออก(Date) ${
+          input.date
+            ? dayjs(input.date).format("DD/MM/YYYY")
+            : dayjs().format("DD/MM/YYYY")
+        }</p>
         <p>ห้อง(Room) ${data.room.nameRoom}</p>
         <p>พนักงาน(Staff) ${userName}</p>
       </div>
@@ -327,6 +333,8 @@ export function templateReceipt(
         <p>โทร. ${data.company?.phone} / อีเมล. ${data.company?.email}</p>
         <p><strong>ลูกค้า(Customer)</strong></p>
         <p>${data.room.customerName}</p>
+        <p>${data.room.customerAddress}</p>
+        <p>เลขบัตรประชาชน: ${data.room.customerIdTax}</p>
       </div>
       <div class="info right">
         <p><strong>${
@@ -334,7 +342,11 @@ export function templateReceipt(
         }</strong></p>
         <p>เลขที่(ID) RCE${data.numberBill}</p>
         <p>รอบบิล(Date) ${input.month}/${input.year}</p>
-        <p>วันที่ออก(Date) ${dayjs(input.date).format("DD/MM/YYYY")}</p>
+        <p>วันที่ออก(Date) ${
+          input.date
+            ? dayjs(input.date).format("DD/MM/YYYY")
+            : dayjs().format("DD/MM/YYYY")
+        }</p>
         <p>ห้อง(Room) ${data.room.nameRoom}</p>
         <p>พนักงาน(Staff) ${userName}</p>
       </div>

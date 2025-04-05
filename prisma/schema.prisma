@@ -142,7 +142,7 @@ model serviceOther {
   roomId Int
   room   room    @relation(fields: [roomId], references: [id], onDelete: Cascade)
   name   String?
-  price  Int     @default(0)
+  price  Float   @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
@@ -217,9 +217,9 @@ model transactionCheckIn {
 }
 
 model transactionCheckOut {
-  id     Int    @id @default(autoincrement())
+  id     Int      @id @default(autoincrement())
   roomId Int
-  room   room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  room   room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   date   DateTime
 
   createdAt DateTime @default(now())
@@ -229,15 +229,24 @@ model transactionCheckOut {
 }
 
 model transactionBlank {
-  id     Int    @id @default(autoincrement())
+  id     Int      @id @default(autoincrement())
   roomId Int
-  room   room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  room   room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   date   DateTime
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
 
   @@map("TransactionBlank")
+}
+
+model runningNumber {
+  id     Int    @id @default(autoincrement())
+  type   Int
+  date   String
+  number Int
+
+  @@map("RunningNumber")
 }
 
 enum typeRoom {
