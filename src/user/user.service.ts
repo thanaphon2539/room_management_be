@@ -2,7 +2,7 @@ import { HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { UpdatePasswordDto, UpdateUserDto } from "./dto/update-user.dto";
 import { PrismaService } from "src/prisma/prisma.service";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
 import { SearchDto } from "src/libs/dto/search.dto";
 import { wrapMeta } from "src/libs/meta/wrap-meta";

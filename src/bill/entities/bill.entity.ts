@@ -20,6 +20,7 @@ export class InvoiceBill {
 
 export class ReceiptBill {
   id: number;
+  numberInv: string;
   numberBill: string;
   company?: SettingAddress;
   room: Room;

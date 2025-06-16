@@ -116,7 +116,7 @@ export function templateInvoice(
       <div class="info">
         <p><strong>${data.company?.name}</strong></p>
         <p> ${data.company?.address}</p>
-        <p>เลขปรระจำตัวผู้เสียภาษี ${data.company?.idTax} สำนักงานใหญ่</p>
+        <p>เลขประจำตัวผู้เสียภาษี ${data.company?.idTax}</p>
         <p>โทร. ${data.company?.phone} / อีเมล. ${data.company?.email}</p>
         <p><strong>ลูกค้า(Customer)</strong></p>
         <p>${data.room.customerName}</p>
@@ -211,7 +211,7 @@ export function templateInvoice(
       </div>
       <div class="info">
         <p> กสิกรไทย</p>
-        <p> บจก.พีเอสซี กรุ๊บ</p>
+        <p> บจก.พีเอสซี กรุ๊ป</p>
         <p> 124-3-37079-1</p>
       </div>
     </div>
@@ -247,7 +247,7 @@ export function templateReceipt(
 
     .header {
       text-align: end;
-      margin-bottom: 20px;
+      margin-bottom: 14px;
     }
 
     .box-info {
@@ -329,7 +329,7 @@ export function templateReceipt(
       <div class="info">
         <p><strong>${data.company?.name}</strong></p>
         <p> ${data.company?.address}</p>
-        <p>เลขปรระจำตัวผู้เสียภาษี ${data.company?.idTax} สำนักงานใหญ่</p>
+        <p>เลขประจำตัวผู้เสียภาษี ${data.company?.idTax}</p>
         <p>โทร. ${data.company?.phone} / อีเมล. ${data.company?.email}</p>
         <p><strong>ลูกค้า(Customer)</strong></p>
         <p>${data.room.customerName}</p>
@@ -341,6 +341,7 @@ export function templateReceipt(
           copy ? "สำเนา (Transcript)" : "ต้นฉบับ (Original)"
         }</strong></p>
         <p>เลขที่(ID) RCE${data.numberBill}</p>
+        <p>เลขที่(INV) INV${data.numberInv}</p>
         <p>รอบบิล(Date) ${input.month}/${input.year}</p>
         <p>วันที่ออก(Date) ${
           input.date
@@ -492,7 +493,7 @@ export function templateInvoices(
       <tr class="bg">
         <td colspan="6" class="border-t border-l border-r">
           <div>
-            <h3>${data.company?.name} (สำนักงานใหญ่)</h3>
+            <h3>${data.company?.name}</h3>
             <p>${data.company?.address}</p>
             <p>เลขประจำตัวผู้เสียภาษี: ${data.company?.idTax} เบอร์ติดต่อ: ${
     data.company?.phone
@@ -648,7 +649,7 @@ export function templateInvoices(
       </tr>
 
       <tr>
-        <td colspan="3" class="border-l border-r">ชื่อบัญชี: บจก.พีเอสซี กรุ๊บ</td>
+        <td colspan="3" class="border-l border-r">ชื่อบัญชี: บจก.พีเอสซี กรุ๊ป</td>
       </tr>
 
       <tr>
@@ -693,10 +694,12 @@ export function templateReceipts(
 
     h3 {
       margin: 0px;
+      font-size: 14px;
     }
 
     h2 {
       margin-top: 0px;
+      font-size: 14px;
     }
 
     p {
@@ -705,6 +708,7 @@ export function templateReceipts(
 
     .text-center {
       text-align: center;
+      font-size: 14px;
     }
 
     td {
@@ -744,7 +748,7 @@ export function templateReceipts(
       <tr class="bg">
         <td colspan="6" class="border-t border-l border-r">
           <div>
-            <h3>${data.company?.name} (สำนักงานใหญ่)</h3>
+            <h3>${data.company?.name}</h3>
             <p>${data.company?.address}</p>
             <p>เลขประจำตัวผู้เสียภาษี: ${data.company?.idTax} เบอร์ติดต่อ: ${
     data.company?.phone
@@ -779,6 +783,7 @@ export function templateReceipts(
           <div>
             <br>
             <p><strong>เลขที่:</strong> REC${data.numberBill}</p>
+            <p><strong>เลขที่ (INV):</strong> INV${data.numberInv}</p>
             <p><strong>วันที่:</strong> ${dayjs(input.date)
               .locale("th")
               .format("DD/MM/BBBB")}</p>
@@ -896,7 +901,7 @@ export function templateReceipts(
       </tr>
 
       <tr>
-        <td colspan="3" class="border-l border-r">ชื่อบัญชี: บจก.พีเอสซี กรุ๊บ</td>
+        <td colspan="3" class="border-l border-r">ชื่อบัญชี: บจก.พีเอสซี กรุ๊ป</td>
       </tr>
 
        <tr>

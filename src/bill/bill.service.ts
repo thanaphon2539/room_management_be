@@ -31,6 +31,13 @@ import {
 } from "./entities/bill.entity";
 import { Request, Response } from "express";
 import { SettingService } from "src/setting/setting.service";
+const isMac = process.platform === "darwin";
+const isWin = process.platform === "win32";
+const pathToChrome = isMac
+  ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+  : isWin
+  ? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+  : "/usr/bin/google-chrome"; // สำหรับ Linux
 
 @Injectable()
 export class BillService {
@@ -383,6 +390,7 @@ export class BillService {
         ...input,
         typeBill: typeBill.receipt,
       });
+      let numberInv = "";
       for (const value of genData.data) {
         const checkINV = await this.prisma.transactionBill.findFirst({
           where: {
@@ -401,6 +409,7 @@ export class BillService {
               status: statusBill.succuess,
             },
           });
+          numberInv = `${checkINV.number}`;
         }
         const checkRC = await this.prisma.transactionBill.findFirst({
           where: {
@@ -451,6 +460,7 @@ export class BillService {
       }
       const newObj = {
         id: genData.data[0].id,
+        numberInv: numberInv,
         numberBill: genData.numberBill,
         company: genData.company,
         room: {
@@ -592,6 +602,7 @@ export class BillService {
         // console.log("newObj >>>", newObj);
         return this.generateCombinedReceipt(input, req, newObj);
       } else {
+        console.log("newObj >>>", newObj);
         return this.generateReceipt(input, req, newObj, copy);
       }
     } catch (error) {
@@ -735,6 +746,7 @@ export class BillService {
         company: {},
         data: [],
       };
+      let checkRunnumber = true;
       for (const value of room) {
         const check = await this.prisma.transactionBill.findFirst({
           where: {
@@ -746,6 +758,7 @@ export class BillService {
         });
         if (check) {
           numberBill = check.number;
+          checkRunnumber = false;
         }
         const result = await this.dataPersonPdf(
           input,
@@ -765,11 +778,13 @@ export class BillService {
         });
       }
       /** insert update */
-      await this.settingService.runningNumber(
-        2,
-        running,
-        dataRunning ? dataRunning.id : 0
-      );
+      if(checkRunnumber){
+        await this.settingService.runningNumber(
+          input.typeBill === typeBill.receipt ? 2 : 1,
+          running,
+          dataRunning ? dataRunning.id : 0
+        );
+      }
       return {
         ...newObj,
         data: _.orderBy(newObj["data"], "nameRoom", "asc"),
@@ -1046,7 +1061,10 @@ export class BillService {
   ) {
     try {
       const userName = req?.user?.name || "admin";
-      const browser = await puppeteer.launch();
+      const browser = await puppeteer.launch({
+        executablePath: pathToChrome,
+        headless: true,
+      });
       const page = await browser.newPage();
       const htmlContent = `
         ${templateInvoice(data, input, userName, false)}
@@ -1118,7 +1136,10 @@ export class BillService {
   ) {
     try {
       const userName = req?.user?.name || "admin";
-      const browser = await puppeteer.launch();
+      const browser = await puppeteer.launch({
+        executablePath: pathToChrome,
+        headless: true,
+      });
       const page = await browser.newPage();
 
       const htmlContent = `
@@ -1185,7 +1206,10 @@ export class BillService {
 
   async generateInvoiceDetail(input: CreateBillDto, req: Request, data: any) {
     try {
-      const browser = await puppeteer.launch();
+      const browser = await puppeteer.launch({
+        executablePath: pathToChrome,
+        headless: true,
+      });
       const page = await browser.newPage();
       console.log("data >>>", data.room);
       const settingBillUnit = await this.prisma.settingBillUnit.findFirst();
@@ -1228,7 +1252,10 @@ export class BillService {
   ) {
     try {
       const userName = req?.user?.name || "admin";
-      const browser = await puppeteer.launch();
+      const browser = await puppeteer.launch({
+        executablePath: pathToChrome,
+        headless: true,
+      });
       const page = await browser.newPage();
 
       // console.log("dataDetail >>>", dataDetail);
@@ -1286,7 +1313,10 @@ export class BillService {
   async generateCombinedReceipt(input: CreateBillDto, req: Request, data: any) {
     try {
       const userName = req?.user?.name || "admin";
-      const browser = await puppeteer.launch();
+      const browser = await puppeteer.launch({
+        executablePath: pathToChrome,
+        headless: true,
+      });
       const page = await browser.newPage();
 
       const htmlContent = `
