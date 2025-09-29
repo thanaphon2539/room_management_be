@@ -21,7 +21,7 @@ import { HttpExceptionFilter } from "src/libs/exceptions/http.exception";
 import { HttpInterceptor } from "src/libs/interceptors/http.interceptor";
 import { SearchDto } from "src/libs/dto/search.dto";
 
-@UseGuards(AuthGuard("jwt"))
+// @UseGuards(AuthGuard("jwt"))
 @Controller("user")
 @UseInterceptors(HttpInterceptor)
 @UseFilters(HttpExceptionFilter)
