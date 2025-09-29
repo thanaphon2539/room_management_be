@@ -4,7 +4,7 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     container_name: room_management_be_dev
     ports:
       - "3005:3005"
