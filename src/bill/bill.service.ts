@@ -37,7 +37,7 @@ const pathToChrome = isMac
   ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
   : isWin
   ? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
-  : "/usr/bin/google-chrome"; // สำหรับ Linux
+  : process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium";
 
 @Injectable()
 export class BillService {
@@ -1064,6 +1064,7 @@ export class BillService {
       const browser = await puppeteer.launch({
         executablePath: pathToChrome,
         headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
       });
       const page = await browser.newPage();
       const htmlContent = `
@@ -1139,6 +1140,7 @@ export class BillService {
       const browser = await puppeteer.launch({
         executablePath: pathToChrome,
         headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
       });
       const page = await browser.newPage();
 
@@ -1209,6 +1211,7 @@ export class BillService {
       const browser = await puppeteer.launch({
         executablePath: pathToChrome,
         headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
       });
       const page = await browser.newPage();
       console.log("data >>>", data.room);
@@ -1255,6 +1258,7 @@ export class BillService {
       const browser = await puppeteer.launch({
         executablePath: pathToChrome,
         headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
       });
       const page = await browser.newPage();
 
@@ -1316,6 +1320,7 @@ export class BillService {
       const browser = await puppeteer.launch({
         executablePath: pathToChrome,
         headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
       });
       const page = await browser.newPage();
 
