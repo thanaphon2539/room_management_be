@@ -13,6 +13,11 @@ export class AppService implements OnModuleInit {
   }
   async onModuleInit() {
     try {
+      const folderPath = path.resolve('./public');
+      if (!fs.existsSync(folderPath)) {
+        fs.mkdirSync(folderPath, { recursive: true });
+        console.log(`Folder created: ${folderPath}`);
+      }
       await this.prisma.$queryRaw`SELECT 1`; // ใช้ Raw SQL เช็คการเชื่อมต่อ
       this._logger.log("Database connected successfully");
     } catch (error) {
