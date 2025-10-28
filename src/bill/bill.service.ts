@@ -241,7 +241,12 @@ export class BillService {
             ) || 0;
           summary.otherFee += otherFee;
           summary.total +=
-            rent + service + waterTotal + electricityTotal + otherFee;
+            rent +
+            service +
+            commonFee +
+            waterTotal +
+            electricityTotal +
+            otherFee;
           roomDetail.push({
             // building: value?.nameRoom.slice(0, 1),
             // roomNumber: value?.nameRoom.slice(1),
@@ -778,7 +783,7 @@ export class BillService {
         });
       }
       /** insert update */
-      if(checkRunnumber){
+      if (checkRunnumber) {
         await this.settingService.runningNumber(
           input.typeBill === typeBill.receipt ? 2 : 1,
           running,
@@ -985,7 +990,7 @@ export class BillService {
           summary.vat3 += vat3;
           summary.vat5 += vat5;
           summary.vat7 += vat7;
-          summary.total += el.price + vat3 + vat5 + vat7;
+          summary.total += el.price + vat7 - (vat3 + vat5);
         }
       }
       return {
