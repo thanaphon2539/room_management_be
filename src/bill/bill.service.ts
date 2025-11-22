@@ -984,8 +984,8 @@ export class BillService {
             sort: el.sort,
           });
           summary.totalNoVat += el.price;
-          summary.itemNoVat += el.name?.includes("ค่าเช่า") ? el.price : 0;
-          summary.itemVat += !el.name?.includes("ค่าเช่า") ? el.price : 0;
+          summary.itemNoVat += el.name?.includes("ค่าเช่า") || !el.type ? el.price : 0;
+          summary.itemVat += !el.name?.includes("ค่าเช่า") && el.type ? el.price : 0;
           summary.vat += vat;
           summary.vat3 += vat3;
           summary.vat5 += vat5;
