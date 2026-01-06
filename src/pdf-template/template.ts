@@ -152,6 +152,7 @@ export function templateInvoice(
       </thead>
       <tbody>
        ${data.room.list
+         .filter((el) => el.price !== "0.00")
          .map(
            (item: ExpenseItems, index) => `
             <tr>
@@ -366,6 +367,7 @@ export function templateReceipt(
       </thead>
       <tbody>
        ${data.room.list
+         .filter((el) => el.price !== "0.00")
          .map(
            (item: ExpenseItems, index) => `
             <tr>
@@ -555,6 +557,7 @@ export function templateInvoices(
       </tr>
 
         ${data.room.list
+          .filter((el) => el.price !== "0.00")
           .map(
             (item: ExpenseItems, index) => `
             <tr>
@@ -807,6 +810,7 @@ export function templateReceipts(
       </tr>
 
         ${data.room.list
+          .filter((el) => el.price !== "0.00")
           .map(
             (item: ExpenseItems, index) => `
             <tr>

@@ -71,7 +71,7 @@ export class SettingService {
     try {
       const objRunningNumber = {
         type: running_type,
-        date: dayjs().format("YYYY-MM-DD"),
+        date: dayjs().format("YYYY-MM"),
         number: Number(running),
       };
       if (!id) {

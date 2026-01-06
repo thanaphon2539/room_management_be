@@ -529,23 +529,23 @@ export class RoomService {
         );
       }
       /** ต้องมีการเพิ่ม function เช็คการจ่ายบิล */
-      const checkBill = await this.prisma.transactionBill.findFirst({
-        where: {
-          roomId: id,
-          year: Number(dayjs().format("YYYY")),
-          month: Number(dayjs().format("MM")),
-        },
-      });
-      if (checkBill && checkBill?.status !== statusBill.succuess) {
-        throw new HttpException(
-          `ไม่สามารถอัพเดทข้อมูลได้ เนื่องจากห้อง (${
-            checkRoom.nameRoom
-          }) ค้างค่าเช่าเดือน : ${dayjs(`${checkBill.year}-${checkBill.month}`)
-            .locale("th")
-            .format("MMM YYYY")}`,
-          HttpStatus.BAD_REQUEST
-        );
-      }
+      // const checkBill = await this.prisma.transactionBill.findFirst({
+      //   where: {
+      //     roomId: id,
+      //     year: Number(dayjs().format("YYYY")),
+      //     month: Number(dayjs().format("MM")),
+      //   },
+      // });
+      // if (checkBill && checkBill?.status !== statusBill.succuess) {
+      //   throw new HttpException(
+      //     `ไม่สามารถอัพเดทข้อมูลได้ เนื่องจากห้อง (${
+      //       checkRoom.nameRoom
+      //     }) ค้างค่าเช่าเดือน : ${dayjs(`${checkBill.year}-${checkBill.month}`)
+      //       .locale("th")
+      //       .format("MMM YYYY")}`,
+      //     HttpStatus.BAD_REQUEST
+      //   );
+      // }
       let roomContactId: any;
       let roomCompanyId: any;
       if (input.contact) {

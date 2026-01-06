@@ -715,7 +715,7 @@ export class BillService {
       const dataRunning = await this.prisma.runningNumber.findFirst({
         where: {
           type: input.typeBill === typeBill.receipt ? 2 : 1,
-          date: dayjs().format("YYYY-MM-DD"),
+          date: dayjs().format("YYYY-MM"),
         },
       });
       const running = this.settingService.getRunningNumber(dataRunning?.number);
