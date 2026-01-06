@@ -67,11 +67,16 @@ export class SettingService {
     }
   }
 
-  async runningNumber(running_type: number, running: string, id: number) {
+  async runningNumber(
+    running_type: number,
+    running: string,
+    id: number,
+    prefix_date: string
+  ) {
     try {
       const objRunningNumber = {
         type: running_type,
-        date: dayjs().format("YYYY-MM"),
+        date: prefix_date,
         number: Number(running),
       };
       if (!id) {

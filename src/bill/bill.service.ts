@@ -715,7 +715,7 @@ export class BillService {
       const dataRunning = await this.prisma.runningNumber.findFirst({
         where: {
           type: input.typeBill === typeBill.receipt ? 2 : 1,
-          date: dayjs().format("YYYY-MM"),
+          date: prefix_date,
         },
       });
       const running = this.settingService.getRunningNumber(dataRunning?.number);
@@ -787,7 +787,8 @@ export class BillService {
         await this.settingService.runningNumber(
           input.typeBill === typeBill.receipt ? 2 : 1,
           running,
-          dataRunning ? dataRunning.id : 0
+          dataRunning ? dataRunning.id : 0,
+          prefix_date
         );
       }
       return {
@@ -984,8 +985,10 @@ export class BillService {
             sort: el.sort,
           });
           summary.totalNoVat += el.price;
-          summary.itemNoVat += el.name?.includes("ค่าเช่า") || !el.type ? el.price : 0;
-          summary.itemVat += !el.name?.includes("ค่าเช่า") && el.type ? el.price : 0;
+          summary.itemNoVat +=
+            el.name?.includes("ค่าเช่า") || !el.type ? el.price : 0;
+          summary.itemVat +=
+            !el.name?.includes("ค่าเช่า") && el.type ? el.price : 0;
           summary.vat += vat;
           summary.vat3 += vat3;
           summary.vat5 += vat5;
