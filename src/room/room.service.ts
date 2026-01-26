@@ -37,7 +37,7 @@ export class RoomService {
         if (!value.nameRoom) {
           throw new HttpException(
             `กรุณากรอกข้อมูลชื่อห้อง`,
-            HttpStatus.BAD_REQUEST
+            HttpStatus.BAD_REQUEST,
           );
         }
         const checkNameRoom = await this.prisma.room.findFirst({
@@ -287,7 +287,7 @@ export class RoomService {
               this.logger.error(error);
               throw new HttpException(
                 `สร้างข้อมูลไม่สำเร็จ`,
-                HttpStatus.BAD_REQUEST
+                HttpStatus.BAD_REQUEST,
               );
             });
           if (result) {
@@ -452,8 +452,8 @@ export class RoomService {
         skip: input.showDataAll
           ? 0
           : input.limit
-          ? (input.page - 1) * input.limit
-          : 0,
+            ? (input.page - 1) * input.limit
+            : 0,
         take: input.limit,
       });
       return wrapMeta(
@@ -478,7 +478,7 @@ export class RoomService {
         count,
         input.showDataAll,
         input.page,
-        input.limit
+        input.limit,
       );
     } catch (error) {
       this.logger.error(error);
@@ -525,7 +525,7 @@ export class RoomService {
       if (!checkRoom) {
         throw new HttpException(
           `ไม่พบข้อมูลห้องที่ต้องการแก้ไข`,
-          HttpStatus.BAD_REQUEST
+          HttpStatus.BAD_REQUEST,
         );
       }
       /** ต้องมีการเพิ่ม function เช็คการจ่ายบิล */
@@ -556,7 +556,7 @@ export class RoomService {
           if (!checkRoomContact) {
             throw new HttpException(
               `ไม่พบข้อมูลผู้ติดต่อที่ต้องการแก้ไข`,
-              HttpStatus.BAD_REQUEST
+              HttpStatus.BAD_REQUEST,
             );
           }
           roomContactId = (
@@ -907,7 +907,7 @@ export class RoomService {
       this.logger.error(error);
       throw new HttpException(
         error?.message || `ไม่สามารถอัพเดทข้อมูลได้`,
-        HttpStatus.BAD_REQUEST
+        HttpStatus.BAD_REQUEST,
       );
     }
   }
@@ -929,13 +929,13 @@ export class RoomService {
 
   async updateWaterUnitAndElectricityUnit(
     input: UpdateRoomWaterUnitAndElectricityUnitDto[],
-    type: typeRoomWaterAndElectricity
+    type: typeRoomWaterAndElectricity,
   ) {
     try {
       if (!input || input.length === 0) {
         throw new HttpException(
           `ไม่พบข้อมูลที่จะทำการอัพเดท`,
-          HttpStatus.BAD_REQUEST
+          HttpStatus.BAD_REQUEST,
         );
       }
       let tbName = "transactionWaterUnit";
@@ -965,7 +965,7 @@ export class RoomService {
           ) {
             throw new HttpException(
               `ค่าของเดือนก่อนหน้าห้ามมีค่น้อยกว่าหรือเท่ากับเดือนปัจจุบัน`,
-              HttpStatus.BAD_REQUEST
+              HttpStatus.BAD_REQUEST,
             );
           }
           const unitBefor =
@@ -1008,34 +1008,29 @@ export class RoomService {
 
   async findWaterUnit(input: FilterRoomWaterUnitAndElectricityUnitDto) {
     try {
-      const dateFilterBefor = dayjs(
-        `${input.year}-${input.month < 9 ? "0" + input.month : input.month}`
-      )
-        .add(-1, "months")
-        .format("YYYY-MM")
-        .split("-");
-      // console.log("dateFilterAfter >>>", dateFilterBefor);
+      const prev = dayjs(
+        `${input.year}-${String(input.month).padStart(2, "0")}`,
+      ).subtract(1, "month");
+      const prevYear = prev.year();
+      const prevMonth = prev.month() + 1; // dayjs month() เป็น 0-11
+      // console.log('prevYear >>>', prevYear);
+      // console.log('prevMonth >>>', prevMonth);
       const result = await this.prisma.room.findMany({
+        // where: { nameRoom: "A102" },
         include: {
           transactionWaterUnit: {
             where: {
-              month: { in: [input.month, Number(dateFilterBefor[1])] },
-              year: { in: [input.year, Number(dateFilterBefor[0])] },
+              OR: [
+                { year: input.year, month: input.month },
+                { year: prevYear, month: prevMonth },
+              ],
             },
-            orderBy: [
-              {
-                month: "desc",
-              },
-              {
-                year: "desc",
-              },
-            ],
+            orderBy: [{ year: "desc" }, { month: "desc" }],
           },
         },
-        orderBy: {
-          nameRoom: "asc",
-        },
+        orderBy: { nameRoom: "asc" },
       });
+      // console.log("result >>>", JSON.stringify(result, null, 2));
       return result.map((el) => {
         let unitBefor = 0;
         let unitAfter = 0;
@@ -1073,25 +1068,28 @@ export class RoomService {
 
   async findElectricityUnit(input: FilterRoomWaterUnitAndElectricityUnitDto) {
     try {
-      const dateFilterBefor = dayjs(
-        `${input.year}-${input.month < 9 ? "0" + input.month : input.month}`
-      )
-        .add(-1, "months")
-        .format("YYYY-MM")
-        .split("-");
+      const prev = dayjs(
+        `${input.year}-${String(input.month).padStart(2, "0")}`,
+      ).subtract(1, "month");
+      const prevYear = prev.year();
+      const prevMonth = prev.month() + 1; // dayjs month() เป็น 0-11
+      // console.log('prevYear >>>', prevYear);
+      // console.log('prevMonth >>>', prevMonth);
       const result = await this.prisma.room.findMany({
         include: {
           transactionElectricityUnit: {
             where: {
-              month: { in: [input.month, Number(dateFilterBefor[1])] },
-              year: { in: [input.year, Number(dateFilterBefor[0])] },
+              OR: [
+                { year: input.year, month: input.month },
+                { year: prevYear, month: prevMonth },
+              ],
             },
             orderBy: [
               {
-                month: "desc",
+                year: "desc",
               },
               {
-                year: "desc",
+                month: "desc",
               },
             ],
           },
