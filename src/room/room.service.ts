@@ -456,30 +456,55 @@ export class RoomService {
             : 0,
         take: input.limit,
       });
-      return wrapMeta(
-        result.map((el) => {
-          const rentTotal =
-            el?.rent?.length > 0 ? _.sum(el.rent.map((rent) => rent.price)) : 0;
-          const serviceFeeTotal =
-            el?.serviceFee?.length > 0
-              ? _.sum(el.serviceFee.map((serviceFee) => serviceFee.price))
-              : 0;
-          const serviceOtherTotal =
-            el?.serviceOther?.length > 0
-              ? _.sum(el.serviceOther.map((other) => other.price))
-              : 0;
+      const now = dayjs();
+      const currentYear = now.year();
+      const currentMonth = now.month() + 1; // dayjs month เริ่มที่ 0
+
+      const prev = now.subtract(1, "month");
+      const prevYear = prev.year();
+      const prevMonth = prev.month() + 1;
+      const items = await Promise.all(
+        result.map(async (el) => {
+          const rentTotal = el?.rent?.length ? _.sumBy(el.rent, "price") : 0;
+          const serviceFeeTotal = el?.serviceFee?.length
+            ? _.sumBy(el.serviceFee, "price")
+            : 0;
+          const otherTotal = el?.serviceOther?.length
+            ? _.sumBy(el.serviceOther, "price")
+            : 0;
+          const transactionBill = await this.prisma.transactionBill.findMany({
+            where: {
+              roomId: el.id,
+              OR: [
+                { year: currentYear, month: currentMonth },
+                { year: prevYear, month: prevMonth },
+              ],
+            },
+            select: {
+              id: true,
+              status: true,
+              year: true,
+              month: true,
+              type: true,
+            }, // เอาแค่มี/ไม่มี ลด payload
+          });
           return {
             ...el,
-            rentTotal: rentTotal,
-            serviceFeeTotal: serviceFeeTotal,
-            otherTotal: serviceOtherTotal,
+            rentTotal,
+            serviceFeeTotal,
+            otherTotal,
+            statusBill:
+              transactionBill.length &&
+              transactionBill.filter(
+                (el) => el && el.status === statusBill.succuess,
+              ).length >= 2
+                ? true
+                : false, // ✅ แนะนำให้เป็น boolean ใช้ง่ายใน UI
+            transactionBill,
           };
         }),
-        count,
-        input.showDataAll,
-        input.page,
-        input.limit,
       );
+      return wrapMeta(items, count, input.showDataAll, input.page, input.limit);
     } catch (error) {
       this.logger.error(error);
       throw new HttpException(`ไม่พบข้อมูล`, HttpStatus.BAD_REQUEST);
