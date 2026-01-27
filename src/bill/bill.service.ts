@@ -36,15 +36,15 @@ const isWin = process.platform === "win32";
 const pathToChrome = isMac
   ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
   : isWin
-  ? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
-  : process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium";
+    ? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+    : process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium";
 
 @Injectable()
 export class BillService {
   private readonly logger: Logger;
   constructor(
     private readonly prisma: PrismaService,
-    private readonly settingService: SettingService
+    private readonly settingService: SettingService,
   ) {
     this.logger = new Logger(BillService.name);
   }
@@ -53,69 +53,18 @@ export class BillService {
     input: CreateBillDto,
     req: Request,
     copy: boolean,
-    detail: boolean
+    detail: boolean,
   ) {
     try {
-      const genData = await this.genDataPdf({
-        ...input,
-        typeBill: typeBill.invoice,
-      });
+      const genData = await this.serviceInsertAndUpdateBill(input);
       // console.log("data >>>", genData);
-      for (const value of genData.data) {
-        const check = await this.prisma.transactionBill.findFirst({
-          where: {
-            roomId: value.id,
-            year: input.year,
-            month: input.month,
-            type: typeBill.invoice,
-          },
-        });
-        if (check) {
-          await this.prisma.transactionBill.update({
-            where: { id: check.id },
-            data: {
-              number: value.numberBill,
-              roomId: value.id,
-              year: input.year,
-              month: input.month,
-              totalNoVat: value.summary.totalNoVat,
-              itemNoVat: value.summary.itemNoVat,
-              itemVat: value.summary.itemVat,
-              vat3: value.summary.vat3,
-              vat5: value.summary.vat5,
-              vat7: value.summary.vat7,
-              total: value.summary.total,
-              status: statusBill.waiting,
-              type: typeBill.invoice,
-            },
-          });
-        } else {
-          await this.prisma.transactionBill.create({
-            data: {
-              number: value.numberBill,
-              roomId: value.id,
-              year: input.year,
-              month: input.month,
-              totalNoVat: value.summary.totalNoVat,
-              itemNoVat: value.summary.itemNoVat,
-              itemVat: value.summary.itemVat,
-              vat3: value.summary.vat3,
-              vat5: value.summary.vat5,
-              vat7: value.summary.vat7,
-              total: value.summary.total,
-              status: statusBill.waiting,
-              type: typeBill.invoice,
-            },
-          });
-        }
-      }
       const newObj = {
         id: genData.data[0].id,
         numberBill: genData.numberBill,
         company: genData.company,
         room: {
           nameRoom: _.uniq(genData.data.map((el) => el.room.nameRoom)).join(
-            ","
+            ",",
           ),
           customerName: genData.data[0].room?.customerName,
           customerAddress: genData.data[0].room?.customerAddress,
@@ -164,13 +113,13 @@ export class BillService {
                     ? el.name
                     : `${el.name}${el.price}`,
               };
-            })
+            }),
           );
           const totalNoVat = parseFloat(
-            value.summary.totalNoVat.replace(/,/g, "")
+            value.summary.totalNoVat.replace(/,/g, ""),
           );
           const itemNoVat = parseFloat(
-            value.summary.itemNoVat.replace(/,/g, "")
+            value.summary.itemNoVat.replace(/,/g, ""),
           );
           const itemVat = parseFloat(value.summary.itemVat.replace(/,/g, ""));
           const vat = parseFloat(value.summary.vat.replace(/,/g, ""));
@@ -193,7 +142,7 @@ export class BillService {
             _.sum(
               value.room.list
                 .filter((rent) => rent.type === "N")
-                .map((rent) => parseFloat(rent.price.replace(/,/g, "")))
+                .map((rent) => parseFloat(rent.price.replace(/,/g, ""))),
             ) || 0;
           summary.rent += rent;
           const service =
@@ -201,9 +150,9 @@ export class BillService {
               value.room.list
                 .filter(
                   (service) =>
-                    service.type === "*V" && !service.name.includes("ส่วนกลาง")
+                    service.type === "*V" && !service.name.includes("ส่วนกลาง"),
                 )
-                .map((service) => parseFloat(service.price.replace(/,/g, "")))
+                .map((service) => parseFloat(service.price.replace(/,/g, ""))),
             ) || 0;
           summary.service += service;
           const commonFee =
@@ -211,13 +160,13 @@ export class BillService {
               value.room.list
                 .filter(
                   (service) =>
-                    service.type === "*V" && service.name.includes("ส่วนกลาง")
+                    service.type === "*V" && service.name.includes("ส่วนกลาง"),
                 )
-                .map((service) => parseFloat(service.price.replace(/,/g, "")))
+                .map((service) => parseFloat(service.price.replace(/,/g, ""))),
             ) || 0;
           summary.commonFee += commonFee;
           const water = value.room.list.find((water) =>
-            water.name.includes("ค่าน้ำ")
+            water.name.includes("ค่าน้ำ"),
           );
           const waterTotal = water?.price
             ? parseFloat(water.price.replace(/,/g, ""))
@@ -225,7 +174,7 @@ export class BillService {
           summary.water.used += parseFloat(water?.qty.replace(/,/g, "")) || 0;
           summary.water.total += waterTotal;
           const electricity = value.room.list.find((electricity) =>
-            electricity.name.includes("ค่าไฟ")
+            electricity.name.includes("ค่าไฟ"),
           );
           const electricityTotal = electricity?.price
             ? parseFloat(electricity.price.replace(/,/g, ""))
@@ -237,7 +186,7 @@ export class BillService {
             _.sum(
               value.room.list
                 .filter((other) => other.type === "")
-                .map((other) => parseFloat(other.price.replace(/,/g, "")))
+                .map((other) => parseFloat(other.price.replace(/,/g, ""))),
             ) || 0;
           summary.otherFee += otherFee;
           summary.total +=
@@ -308,14 +257,14 @@ export class BillService {
             name: data.name,
             qty: _.sum(
               dataGroupList[key].map((el) =>
-                parseFloat(el.qty.replace(/,/g, ""))
-              )
+                parseFloat(el.qty.replace(/,/g, "")),
+              ),
             ),
             unitPrice: unitPrice,
             price: _.sum(
               dataGroupList[key].map((el) =>
-                parseFloat(el.price.replace(/,/g, ""))
-              )
+                parseFloat(el.price.replace(/,/g, "")),
+              ),
             ).toLocaleString("en-US", {
               minimumFractionDigits: 2,
             }),
@@ -342,31 +291,31 @@ export class BillService {
           "en-US",
           {
             minimumFractionDigits: 2,
-          }
+          },
         );
         newObj["summary"]["vat3"] = newObj["summary"]["vat3"].toLocaleString(
           "en-US",
           {
             minimumFractionDigits: 2,
-          }
+          },
         );
         newObj["summary"]["vat5"] = newObj["summary"]["vat5"].toLocaleString(
           "en-US",
           {
             minimumFractionDigits: 2,
-          }
+          },
         );
         newObj["summary"]["vat7"] = newObj["summary"]["vat7"].toLocaleString(
           "en-US",
           {
             minimumFractionDigits: 2,
-          }
+          },
         );
         newObj["summary"]["total"] = newObj["summary"]["total"].toLocaleString(
           "en-US",
           {
             minimumFractionDigits: 2,
-          }
+          },
         );
         newObj["summary"]["totalNoVat"] = newObj["summary"][
           "totalNoVat"
@@ -384,7 +333,7 @@ export class BillService {
         {
           message: error?.message,
         },
-        HttpStatus.BAD_REQUEST
+        HttpStatus.BAD_REQUEST,
       );
     }
   }
@@ -470,7 +419,7 @@ export class BillService {
         company: genData.company,
         room: {
           nameRoom: _.uniq(genData.data.map((el) => el.room.nameRoom)).join(
-            ","
+            ",",
           ),
           customerName: genData.data[0].room?.customerName,
           customerAddress: genData.data[0].room?.customerAddress,
@@ -502,13 +451,13 @@ export class BillService {
                     ? el.name
                     : `${el.name}${el.price}`,
               };
-            })
+            }),
           );
           const totalNoVat = parseFloat(
-            value.summary.totalNoVat.replace(/,/g, "")
+            value.summary.totalNoVat.replace(/,/g, ""),
           );
           const itemNoVat = parseFloat(
-            value.summary.itemNoVat.replace(/,/g, "")
+            value.summary.itemNoVat.replace(/,/g, ""),
           );
           const itemVat = parseFloat(value.summary.itemVat.replace(/,/g, ""));
           const vat = parseFloat(value.summary.vat.replace(/,/g, ""));
@@ -539,14 +488,14 @@ export class BillService {
             name: data.name,
             qty: _.sum(
               dataGroupList[key].map((el) =>
-                parseFloat(el.qty.replace(/,/g, ""))
-              )
+                parseFloat(el.qty.replace(/,/g, "")),
+              ),
             ),
             unitPrice: unitPrice,
             price: _.sum(
               dataGroupList[key].map((el) =>
-                parseFloat(el.price.replace(/,/g, ""))
-              )
+                parseFloat(el.price.replace(/,/g, "")),
+              ),
             ).toLocaleString("en-US", {
               minimumFractionDigits: 2,
             }),
@@ -573,31 +522,31 @@ export class BillService {
           "en-US",
           {
             minimumFractionDigits: 2,
-          }
+          },
         );
         newObj["summary"]["vat3"] = newObj["summary"]["vat3"].toLocaleString(
           "en-US",
           {
             minimumFractionDigits: 2,
-          }
+          },
         );
         newObj["summary"]["vat5"] = newObj["summary"]["vat5"].toLocaleString(
           "en-US",
           {
             minimumFractionDigits: 2,
-          }
+          },
         );
         newObj["summary"]["vat7"] = newObj["summary"]["vat7"].toLocaleString(
           "en-US",
           {
             minimumFractionDigits: 2,
-          }
+          },
         );
         newObj["summary"]["total"] = newObj["summary"]["total"].toLocaleString(
           "en-US",
           {
             minimumFractionDigits: 2,
-          }
+          },
         );
         newObj["summary"]["totalNoVat"] = newObj["summary"][
           "totalNoVat"
@@ -607,7 +556,7 @@ export class BillService {
         // console.log("newObj >>>", newObj);
         return this.generateCombinedReceipt(input, req, newObj);
       } else {
-        console.log("newObj >>>", newObj);
+        // console.log("newObj >>>", newObj);
         return this.generateReceipt(input, req, newObj, copy);
       }
     } catch (error) {
@@ -616,7 +565,7 @@ export class BillService {
         {
           message: error?.message,
         },
-        HttpStatus.BAD_REQUEST
+        HttpStatus.BAD_REQUEST,
       );
     }
   }
@@ -641,14 +590,28 @@ export class BillService {
             nameRoom: "asc",
           },
         });
-        return result.map((el) => ({
-          id: el.id,
-          nameRoom: el.nameRoom,
-          status: el.status,
-          type: el.type,
-          contactName: el?.roomContact?.name,
-          companyName: null,
-        }));
+        const dataTransactionCal =
+          await this.transactionInsertAndUpdateCalculatorBill({
+            year: Number(input.year),
+            month: Number(input.month),
+            nameRoom: result.map((el) => el.nameRoom).join(","),
+            type: input.type,
+            date: "",
+          });
+        return result.map((el) => {
+          const totalMap = new Map(
+            dataTransactionCal.map((item) => [item.id, item.total]),
+          );
+          return {
+            id: el.id,
+            nameRoom: el.nameRoom,
+            status: el.status,
+            type: el.type,
+            contactName: el?.roomContact?.name,
+            companyName: null,
+            total: totalMap.get(el.id) ?? 0,
+          };
+        });
       } else {
         const result = await this.prisma.room.findMany({
           where: {
@@ -669,16 +632,46 @@ export class BillService {
             nameRoom: "asc",
           },
         });
+        const dataTransactionCal =
+          await this.transactionInsertAndUpdateCalculatorBill({
+            year: Number(input.year),
+            month: Number(input.month),
+            nameRoom: result.map((el) => el.nameRoom).join(","),
+            // nameRoom: "A101,A117",
+            type: input.type,
+            date: "",
+          });
+        // console.log("dataTransactionCal >>>", dataTransactionCal);
+        const toNumber = (v: unknown) => {
+          if (typeof v === "number") return v;
+          if (typeof v === "string") {
+            const cleaned = v.replace(/,/g, "").trim(); // ✅ remove commas
+            const n = Number(cleaned);
+            return Number.isFinite(n) ? n : 0;
+          }
+          return 0;
+        };
+
+        const totalByRoom = new Map<string, number>();
+        for (const t of dataTransactionCal) {
+          totalByRoom.set(t.nameRoom, toNumber(t.total));
+        }
         const dataGroupBy = _.groupBy(result, "roomCompany.id");
-        console.log("dataGroupBy >>>", dataGroupBy);
-        const newObj: any = [];
+        const newObj: any[] = [];
         for (const key in dataGroupBy) {
-          const [data] = dataGroupBy[key];
+          const group = dataGroupBy[key];
+          const first = group[0];
+          const rooms = group.map((el) => el.nameRoom);
+          const total = rooms.reduce((sum, room) => {
+            return sum + (totalByRoom.get(room) ?? 0);
+          }, 0);
           newObj.push({
-            nameRoom: dataGroupBy[key].map((el) => el.nameRoom).join(","),
-            type: data.type,
-            contactName: data?.roomContact?.name,
-            companyName: data?.roomCompany?.name,
+            roomCompanyId: key,
+            nameRoom: rooms.join(","),
+            type: first.type,
+            contactName: first?.roomContact?.name,
+            companyName: first?.roomCompany?.name,
+            total: total.toLocaleString("en-US", { minimumFractionDigits: 2 }),
           });
         }
         return newObj;
@@ -694,21 +687,6 @@ export class BillService {
       const settingAddress =
         await this.prisma.settingContactAddress.findFirst();
       const settingBillUnit = await this.prisma.settingBillUnit.findFirst();
-      /** findbill */
-      // const countReceipt = await this.prisma.transactionBill.findFirst({
-      //   where: {
-      //     type: input.typeBill,
-      //     year: input.year,
-      //     month: input.month,
-      //   },
-      //   orderBy: {
-      //     number: "desc",
-      //   },
-      // });
-      // let numberBill = `${dayjs().format("YYYYMM")}0001`;
-      // if (countReceipt) {
-      //   numberBill = `${(Number(countReceipt.number) + 1).toString()}`;
-      // }
       const prefix_date = `${input.year}${
         input.month < 9 ? "0" + input.month : input.month
       }`;
@@ -721,7 +699,7 @@ export class BillService {
       const running = this.settingService.getRunningNumber(dataRunning?.number);
       let numberBill = `${prefix_date}${await this.settingService.zeroFill(
         running,
-        4
+        4,
       )}`;
       const nameRoom = input.nameRoom.split(",");
       const room = await this.prisma.room.findMany({
@@ -743,7 +721,7 @@ export class BillService {
           {
             message: `ไม่พบข้อมูลห้อง`,
           },
-          HttpStatus.BAD_REQUEST
+          HttpStatus.BAD_REQUEST,
         );
       }
       const newObj: any = {
@@ -770,7 +748,7 @@ export class BillService {
           value,
           settingAddress,
           settingBillUnit,
-          numberBill
+          numberBill,
         );
         newObj["numberBill"] = result.numberBill;
         newObj["company"] = result.company;
@@ -788,7 +766,7 @@ export class BillService {
           input.typeBill === typeBill.receipt ? 2 : 1,
           running,
           dataRunning ? dataRunning.id : 0,
-          prefix_date
+          prefix_date,
         );
       }
       return {
@@ -801,7 +779,7 @@ export class BillService {
         {
           message: error?.message,
         },
-        HttpStatus.BAD_REQUEST
+        HttpStatus.BAD_REQUEST,
       );
     }
   }
@@ -811,7 +789,7 @@ export class BillService {
     room: any,
     settingAddress: any,
     settingBillUnit: any,
-    numberBill: string
+    numberBill?: string,
   ) {
     try {
       /** ค่าน้ำ ค่าไฟ */
@@ -1056,7 +1034,7 @@ export class BillService {
         {
           message: error?.message,
         },
-        HttpStatus.BAD_REQUEST
+        HttpStatus.BAD_REQUEST,
       );
     }
   }
@@ -1065,7 +1043,7 @@ export class BillService {
     input: CreateBillDto,
     req: Request,
     data: InvoiceBill,
-    copy: boolean
+    copy: boolean,
   ) {
     try {
       const userName = req?.user?.name || "admin";
@@ -1132,7 +1110,7 @@ export class BillService {
         {
           message: error?.message,
         },
-        HttpStatus.BAD_REQUEST
+        HttpStatus.BAD_REQUEST,
       );
     }
   }
@@ -1141,7 +1119,7 @@ export class BillService {
     input: CreateBillDto,
     req: Request,
     data: ReceiptBill,
-    copy: boolean
+    copy: boolean,
   ) {
     try {
       const userName = req?.user?.name || "admin";
@@ -1209,7 +1187,7 @@ export class BillService {
         {
           message: error?.message,
         },
-        HttpStatus.BAD_REQUEST
+        HttpStatus.BAD_REQUEST,
       );
     }
   }
@@ -1232,11 +1210,11 @@ export class BillService {
         }) || "",
         settingBillUnit?.electricityUnit.toLocaleString("en-US", {
           minimumFractionDigits: 2,
-        }) || ""
+        }) || "",
       );
       await page.setContent(htmlContent, { waitUntil: "networkidle0" });
       const filename = `invoice-detail-${"customerName"}-${dayjs().format(
-        "YYYY-MM-DD-HH-mm"
+        "YYYY-MM-DD-HH-mm",
       )}.pdf`;
       const pdfPath = path.join(__dirname, `../../../public/${filename}`);
       await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
@@ -1250,7 +1228,7 @@ export class BillService {
         {
           message: error?.message,
         },
-        HttpStatus.BAD_REQUEST
+        HttpStatus.BAD_REQUEST,
       );
     }
   }
@@ -1259,7 +1237,7 @@ export class BillService {
     input: CreateBillDto,
     req: Request,
     data: any,
-    dataDetail: any
+    dataDetail: any,
   ) {
     try {
       const userName = req?.user?.name || "admin";
@@ -1285,7 +1263,7 @@ export class BillService {
           }) || "",
           settingBillUnit?.electricityUnit.toLocaleString("en-US", {
             minimumFractionDigits: 2,
-          }) || ""
+          }) || "",
         )}
       `;
 
@@ -1317,7 +1295,7 @@ export class BillService {
       this.logger.error("generateCombinedInvoice error >>>", error);
       throw new HttpException(
         { message: error?.message },
-        HttpStatus.BAD_REQUEST
+        HttpStatus.BAD_REQUEST,
       );
     }
   }
@@ -1366,7 +1344,217 @@ export class BillService {
       this.logger.error("generateCombinedReceipt error >>>", error);
       throw new HttpException(
         { message: error?.message },
-        HttpStatus.BAD_REQUEST
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  async serviceInsertAndUpdateBill(input: CreateBillDto) {
+    try {
+      const genData = await this.genDataPdf({
+        ...input,
+        typeBill: typeBill.invoice,
+      });
+      for (const value of genData.data) {
+        await this.transactionInsertAndUpdateBill(input, value);
+      }
+      return genData;
+    } catch (error) {
+      this.logger.error("serviceInsertAndUpdateBill error >>>", error);
+      throw new HttpException(
+        { message: error?.message },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  async transactionInsertAndUpdateBill(input: CreateBillDto, value: any) {
+    try {
+      const check = await this.prisma.transactionBill.findFirst({
+        where: {
+          roomId: value.id,
+          year: input.year,
+          month: input.month,
+          type: typeBill.invoice,
+        },
+      });
+      if (check) {
+        await this.prisma.transactionBill.update({
+          where: { id: check.id },
+          data: {
+            number: value.numberBill,
+            roomId: value.id,
+            year: input.year,
+            month: input.month,
+            totalNoVat: value.summary.totalNoVat,
+            itemNoVat: value.summary.itemNoVat,
+            itemVat: value.summary.itemVat,
+            vat3: value.summary.vat3,
+            vat5: value.summary.vat5,
+            vat7: value.summary.vat7,
+            total: value.summary.total,
+            status: statusBill.waiting,
+            type: typeBill.invoice,
+          },
+        });
+      } else {
+        await this.prisma.transactionBill.create({
+          data: {
+            number: value.numberBill,
+            roomId: value.id,
+            year: input.year,
+            month: input.month,
+            totalNoVat: value.summary.totalNoVat,
+            itemNoVat: value.summary.itemNoVat,
+            itemVat: value.summary.itemVat,
+            vat3: value.summary.vat3,
+            vat5: value.summary.vat5,
+            vat7: value.summary.vat7,
+            total: value.summary.total,
+            status: statusBill.waiting,
+            type: typeBill.invoice,
+          },
+        });
+      }
+    } catch (error) {
+      this.logger.error("transactionInsertAndUpdateBill error >>>", error);
+      throw new HttpException(
+        { message: error?.message },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  async transactionInsertAndUpdateCalculatorBill(input: CreateBillDto) {
+    try {
+      const genData = await this.genCalculatorData(input);
+      // console.log('genData.data >>>', JSON.stringify(genData.data, null, 2));
+      const dataTransactionCal: any[] = [];
+      for (const value of genData.data) {
+        const check = await this.prisma.transactionCalculatorBill.findFirst({
+          where: {
+            roomId: value.id,
+            year: Number(input.year),
+            month: Number(input.month),
+          },
+        });
+        if (check) {
+          await this.prisma.transactionCalculatorBill.update({
+            where: { id: check.id },
+            data: {
+              roomId: value.id,
+              year: Number(input.year),
+              month: Number(input.month),
+              totalNoVat: value.summary.totalNoVat,
+              itemNoVat: value.summary.itemNoVat,
+              itemVat: value.summary.itemVat,
+              vat3: value.summary.vat3,
+              vat5: value.summary.vat5,
+              vat7: value.summary.vat7,
+              total: value.summary.total,
+              rentTotal: _.sum(
+                value.room.list.find((el) => el.type.includes("N"))?.price,
+              ),
+              updatedAt: new Date(),
+            },
+          });
+        } else {
+          await this.prisma.transactionCalculatorBill.create({
+            data: {
+              roomId: value.id,
+              year: Number(input.year),
+              month: Number(input.month),
+              totalNoVat: value.summary.totalNoVat,
+              itemNoVat: value.summary.itemNoVat,
+              itemVat: value.summary.itemVat,
+              vat3: value.summary.vat3,
+              vat5: value.summary.vat5,
+              vat7: value.summary.vat7,
+              total: value.summary.total,
+              rentTotal: _.sum(
+                value.room.list.find((el) => el.type.includes("N"))?.price,
+              ),
+            },
+          });
+        }
+        dataTransactionCal.push({
+          id: value.id,
+          nameRoom: value.nameRoom,
+          total: value.summary.total,
+        });
+      }
+      return dataTransactionCal;
+    } catch (error) {
+      this.logger.error(
+        "transactionInsertAndUpdateCalculatorBill error >>>",
+        error,
+      );
+      throw new HttpException(
+        { message: error?.message },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  async genCalculatorData(input: CreateBillDto) {
+    try {
+      const settingAddress =
+        await this.prisma.settingContactAddress.findFirst();
+      const settingBillUnit = await this.prisma.settingBillUnit.findFirst();
+      const nameRoom = input.nameRoom.split(",");
+      const room = await this.prisma.room.findMany({
+        where: {
+          nameRoom: {
+            in: nameRoom,
+          },
+        },
+        include: {
+          roomContact: true,
+          roomCompany: true,
+          rent: true,
+          serviceFee: true,
+          serviceOther: true,
+        },
+      });
+      if (room.length === 0) {
+        throw new HttpException(
+          {
+            message: `ไม่พบข้อมูลห้อง`,
+          },
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      const newObj: any = {
+        numberBill: "",
+        company: {},
+        data: [],
+      };
+      for (const value of room) {
+        const result = await this.dataPersonPdf(
+          input,
+          value,
+          settingAddress,
+          settingBillUnit,
+        );
+        newObj["company"] = result.company;
+        newObj["data"].push({
+          id: result.id,
+          nameRoom: result.nameRoom,
+          room: result.room,
+          summary: result.summary,
+        });
+      }
+      return {
+        ...newObj,
+        data: _.orderBy(newObj["data"], "nameRoom", "asc"),
+      };
+    } catch (error) {
+      this.logger.error("genCalculatorData error >>>", error);
+      throw new HttpException(
+        {
+          message: error?.message,
+        },
+        HttpStatus.BAD_REQUEST,
       );
     }
   }

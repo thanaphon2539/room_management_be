@@ -27,6 +27,11 @@ export class ReportService {
             },
           },
         },
+        orderBy: {
+          room: {
+            nameRoom: "asc",
+          },
+        },
       });
       // console.log("data >>>", data);
       const workbook = new ExcelJS.Workbook();
@@ -48,7 +53,7 @@ export class ReportService {
       // Add data rows
       let i = 1;
       let type = `บุคคล`;
-      let itemNoVatTotal = 0;
+      let itemTotal = 0;
       for (const value of data) {
         let customer = value.room?.roomContact?.name;
         if (value.room.type === typeRoom.legalEntity) {
@@ -59,19 +64,19 @@ export class ReportService {
         if (value.status === statusBill.succuess) {
           status = `ชำระเงินเรียบร้อย`;
         }
-        const itemNoVat = parseFloat(value?.itemNoVat.replace(/,/g, "")) || 0;
+        const total = parseFloat(value?.total.replace(/,/g, "")) || 0;
         worksheet.addRow([
           i,
           value.room.nameRoom,
           type,
           customer,
-          itemNoVat.toLocaleString("en-US", {
+          total.toLocaleString("en-US", {
             minimumFractionDigits: 2,
           }),
           status,
         ]);
 
-        itemNoVatTotal += itemNoVat;
+        itemTotal += total;
         i++;
       }
 
@@ -81,7 +86,7 @@ export class ReportService {
         "",
         "",
         "",
-        itemNoVatTotal.toLocaleString("en-US", {
+        itemTotal.toLocaleString("en-US", {
           minimumFractionDigits: 2,
         }),
         "",

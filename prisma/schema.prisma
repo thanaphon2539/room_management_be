@@ -77,6 +77,7 @@ model room {
   transactionCheckIn         transactionCheckIn[]
   transactionCheckOut        transactionCheckOut[]
   transactionBlank           transactionBlank[]
+  transactionCalculatorBills transactionCalculatorBill[]
 
   @@index([nameRoom, type, status])
   @@map("Room")
@@ -247,6 +248,27 @@ model runningNumber {
   number Int
 
   @@map("RunningNumber")
+}
+
+model transactionCalculatorBill {
+  id         Int    @id @default(autoincrement())
+  roomId     Int
+  room       room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  month      Int
+  year       Int
+  rentTotal  String @default("0")
+  totalNoVat String
+  itemNoVat  String
+  itemVat    String
+  vat3       String
+  vat5       String
+  vat7       String
+  total      String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@map("TransactionCalculatorBill")
 }
 
 enum typeRoom {
