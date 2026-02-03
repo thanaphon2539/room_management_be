@@ -811,10 +811,12 @@ export class BillService {
           }
           return res.map((el) => ({
             name: `ค่าน้ำ`,
-            qty: el.unitAfter - el.unitBefor,
+            qty: el.unitAfter ? el.unitAfter - el.unitBefor : 0,
             unitPrice: settingBillUnit?.waterUnit,
-            price: settingBillUnit?.waterUnit
-              ? (el.unitAfter - el.unitBefor) * settingBillUnit.waterUnit
+            price: el.unitAfter
+              ? settingBillUnit?.waterUnit
+                ? (el.unitAfter - el.unitBefor) * settingBillUnit.waterUnit
+                : 0
               : 0,
             unitBefor: el.unitBefor,
             unitAfter: el.unitAfter,
@@ -835,11 +837,13 @@ export class BillService {
             }
             return res.map((el) => ({
               name: `ค่าไฟ`,
-              qty: el.unitAfter - el.unitBefor,
+              qty: el.unitAfter ? el.unitAfter - el.unitBefor : 0,
               unitPrice: settingBillUnit?.electricityUnit,
-              price: settingBillUnit?.electricityUnit
-                ? (el.unitAfter - el.unitBefor) *
-                  settingBillUnit.electricityUnit
+              price: el.unitAfter
+                ? settingBillUnit?.electricityUnit
+                  ? (el.unitAfter - el.unitBefor) *
+                    settingBillUnit.electricityUnit
+                  : 0
                 : 0,
               unitBefor: el.unitBefor,
               unitAfter: el.unitAfter,

@@ -13,7 +13,7 @@ export function templateInvoice(
   data: InvoiceBill,
   input: CreateBillDto,
   userName: string,
-  copy: boolean
+  copy: boolean,
 ) {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -163,7 +163,7 @@ export function templateInvoice(
                 <td>${item.vat}</td>
                 <td>${item.total}</td>
             </tr>
-              `
+              `,
          )
          .join("")}
       </tbody>
@@ -226,7 +226,7 @@ export function templateReceipt(
   data: ReceiptBill,
   input: CreateBillDto,
   userName: string,
-  copy: boolean
+  copy: boolean,
 ) {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -378,7 +378,7 @@ export function templateReceipt(
                 <td>${item.vat}</td>
                 <td>${item.total}</td>
             </tr>
-              `
+              `,
          )
          .join("")}
       </tbody>
@@ -427,7 +427,7 @@ export function templateInvoices(
   data: InvoiceBill,
   input: CreateBillDto,
   userName: string,
-  copy: boolean
+  copy: boolean,
 ) {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -498,8 +498,8 @@ export function templateInvoices(
             <h3>${data.company?.name}</h3>
             <p>${data.company?.address}</p>
             <p>เลขประจำตัวผู้เสียภาษี: ${data.company?.idTax} เบอร์ติดต่อ: ${
-    data.company?.phone
-  }</p>
+              data.company?.phone
+            }</p>
           </div>
         </td>
         <td colspan="3" class="border-t border-r">
@@ -535,10 +535,10 @@ export function templateInvoices(
             <p><strong>เดือน:</strong> ${dayjs(`${input.year}-${input.month}`)
               .locale("th")
               .format("MMMM")} / ${dayjs(`${input.year}-${input.month}`)
-    .locale("en")
-    .format("MMMM")}</p>
+              .locale("en")
+              .format("MMMM")}</p>
             <p><strong>กำหนดชำระ:</strong>${dayjs(
-              `${input.year}-${input.month}`
+              `${input.year}-${input.month}`,
             )
               .locale("th")
               .format("07/MM/BBBB")}</p>
@@ -570,7 +570,7 @@ export function templateInvoices(
               <td class="border-r text-center">${item.unitPrice}</td>
               <td class="border-r text-end">${item.price}</td>
             </tr>
-                      `
+                      `,
           )
           .join("")}
 
@@ -680,7 +680,7 @@ export function templateReceipts(
   data: ReceiptBill,
   input: CreateBillDto,
   userName: string,
-  copy: boolean
+  copy: boolean,
 ) {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -754,8 +754,8 @@ export function templateReceipts(
             <h3>${data.company?.name}</h3>
             <p>${data.company?.address}</p>
             <p>เลขประจำตัวผู้เสียภาษี: ${data.company?.idTax} เบอร์ติดต่อ: ${
-    data.company?.phone
-  }</p>
+              data.company?.phone
+            }</p>
           </div>
         </td>
         <td colspan="3" class="border-t border-r">
@@ -793,8 +793,8 @@ export function templateReceipts(
             <p><strong>เดือน:</strong> ${dayjs(`${input.year}-${input.month}`)
               .locale("th")
               .format("MMMM")} / ${dayjs(`${input.year}-${input.month}`)
-    .locale("en")
-    .format("MMMM")}</p>
+              .locale("en")
+              .format("MMMM")}</p>
             <br>
           </div>
         </td>
@@ -823,7 +823,7 @@ export function templateReceipts(
               <td class="border-r text-center">${item.unitPrice}</td>
               <td class="border-r text-end">${item.price}</td>
             </tr>
-                      `
+                      `,
           )
           .join("")}
 
@@ -916,7 +916,9 @@ export function templateReceipts(
       <tr height="20px">
         <td colspan="3" width="33%" class="border-l border-r border-b"/>
         <td colspan="3" width="33%" class=" border-r border-b"/>
-        <td colspan="3" width="33%" class=" border-r border-b text-center">วันที่: ${dayjs()
+        <td colspan="3" width="33%" class=" border-r border-b text-center">วันที่: ${dayjs(
+          input.date,
+        )
           .locale("th")
           .format("DD/MM/BBBB")}</td>
       </tr>
@@ -933,7 +935,7 @@ export function templateDetailInvoices(
   data: any,
   input: CreateBillDto,
   unitPriceWater: string,
-  unitPriceElectricity: string
+  unitPriceElectricity: string,
 ) {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1035,7 +1037,7 @@ export function templateDetailInvoices(
             .locale("th")
             .format("MMMM BBBB")}</p>
           <p>จดหน่วยการใช้น้ำและไฟฟ้า วันที่ ${dayjs(
-            `${input.year}-${input.month - 1}-24`
+            `${input.year}-${input.month - 1}-24`,
           )
             .locale("th")
             .format("DD/MM/BBBB")}</p>
@@ -1108,7 +1110,7 @@ export function templateDetailInvoices(
               <td>${item.otherFee}</td>
               <td>${item.total}</td>
             </tr>
-             `
+             `,
         )
         .join("")}
        <tr class="no-bg">
