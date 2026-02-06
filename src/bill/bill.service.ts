@@ -219,16 +219,17 @@ export class BillService {
                 : 0,
             },
             otherFee: otherFee,
-            total: (
-              rent +
-              service +
-              commonFee +
-              waterTotal +
-              electricityTotal +
-              otherFee
-            ).toLocaleString("en-US", {
-              minimumFractionDigits: 2,
-            }),
+            total:
+              (
+                rent +
+                service +
+                commonFee +
+                waterTotal +
+                electricityTotal +
+                otherFee
+              ).toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+              }) || "0.00",
           });
         }
         if (detail) {
@@ -237,13 +238,15 @@ export class BillService {
             room: roomDetail,
             summary: {
               ...summary,
-              total: summary.total.toLocaleString("en-US", {
-                minimumFractionDigits: 2,
-              }),
+              total: summary.total
+                ? summary.total.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                  })
+                : "0.00",
             },
           };
         }
-        console.log("list >>>", list);
+        // console.log("list >>>", list);
         const dataGroupList = _.groupBy(list, "namePrice");
         const newObjList: any[] = [];
         for (const key in dataGroupList) {
@@ -261,13 +264,14 @@ export class BillService {
               ),
             ),
             unitPrice: unitPrice,
-            price: _.sum(
-              dataGroupList[key].map((el) =>
-                parseFloat(el.price.replace(/,/g, "")),
-              ),
-            ).toLocaleString("en-US", {
-              minimumFractionDigits: 2,
-            }),
+            price:
+              _.sum(
+                dataGroupList[key].map((el) =>
+                  parseFloat(el.price.replace(/,/g, "")),
+                ),
+              ).toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+              }) || "0.00",
             sort: data.sort,
           });
         }
@@ -925,7 +929,10 @@ export class BillService {
           let name = `${el.name} เดือน: ${input.month}/${input.year}`;
           let qty = 1;
           let unitPrice = el.price;
-          if (el.name.includes("ค่าน้ำ") || el.name.includes("ค่าไฟ")) {
+          if (
+            el.sort !== 5 &&
+            (el.name.includes("ค่าน้ำ") || el.name.includes("ค่าไฟ"))
+          ) {
             name = `${el.name} เดือน: ${monthAgo[1]}/${monthAgo[0]}`;
             if (input.type === typeRoom.person) {
               name = `${el.name} เดือน: ${monthAgo[1]}/${monthAgo[0]} (${el.unitAfter} - ${el.unitBefor} = ${el.qty} ยูนิต)`;
@@ -937,12 +944,14 @@ export class BillService {
           // if (!el.name.includes("ค่าเช่า")) {
           //   type = "V";
           // }
+          // console.log("el >>>", el);
+          // console.log("unitPrice >>>", unitPrice);
           resultList.push({
             type: el.type,
             name: name,
             unitBefor: el?.unitBefor || 0,
             unitAfter: el?.unitAfter || 0,
-            qty: qty.toString(),
+            qty: qty ? qty.toString() : "0",
             unitPrice: unitPrice.toLocaleString("en-US", {
               minimumFractionDigits: 2,
             }),
@@ -978,6 +987,8 @@ export class BillService {
           summary.total += el.price + vat7 - (vat3 + vat5);
         }
       }
+      // console.log("resultList >>>", resultList);
+      // console.log('summary >>>', summary);
       return {
         id: room.id,
         nameRoom: room.nameRoom,
@@ -1007,33 +1018,42 @@ export class BillService {
           list: resultList,
         },
         summary: {
-          totalNoVat: summary.totalNoVat.toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-          }),
-          itemNoVat: summary.itemNoVat.toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-          }),
-          itemVat: summary.itemVat.toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-          }),
-          vat: summary.vat.toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-          }),
-          vat3: summary.vat3.toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-          }),
-          vat5: summary.vat5.toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-          }),
-          vat7: summary.vat7.toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-          }),
-          total: summary.total.toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-          }),
+          totalNoVat:
+            summary.totalNoVat.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+            }) || "0.00",
+          itemNoVat:
+            summary.itemNoVat.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+            }) || "0.00",
+          itemVat:
+            summary.itemVat.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+            }) || "0.00",
+          vat:
+            summary.vat.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+            }) || "0.00",
+          vat3:
+            summary.vat3.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+            }) || "0.00",
+          vat5:
+            summary.vat5.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+            }) || "0.00",
+          vat7:
+            summary.vat7.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+            }) || "0.00",
+          total:
+            summary.total.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+            }) || "0.00",
         },
       };
     } catch (error) {
+      console.log("err", error);
       throw new HttpException(
         {
           message: error?.message,
@@ -1204,7 +1224,7 @@ export class BillService {
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
       });
       const page = await browser.newPage();
-      console.log("data >>>", data.room);
+      // console.log("data >>>", data.room);
       const settingBillUnit = await this.prisma.settingBillUnit.findFirst();
       const htmlContent = templateDetailInvoices(
         data,
@@ -1432,7 +1452,7 @@ export class BillService {
   async transactionInsertAndUpdateCalculatorBill(input: CreateBillDto) {
     try {
       const genData = await this.genCalculatorData(input);
-      // console.log('genData.data >>>', JSON.stringify(genData.data, null, 2));
+      // console.log("genData.data >>>", JSON.stringify(genData.data, null, 2));
       const dataTransactionCal: any[] = [];
       for (const value of genData.data) {
         const check = await this.prisma.transactionCalculatorBill.findFirst({
@@ -1540,6 +1560,7 @@ export class BillService {
           settingAddress,
           settingBillUnit,
         );
+        // console.log('result >>>', result);
         newObj["company"] = result.company;
         newObj["data"].push({
           id: result.id,
