@@ -915,7 +915,9 @@ export class BillService {
         } else {
           if (el?.type !== "N") {
             vat = (el.price * 7) / 100;
-            vat7 = (el.price * 7) / 100;
+            if (el?.type) {
+              vat7 = (el.price * 7) / 100;
+            }
           }
           if (el?.type === "*V") {
             vat = (el.price * 3) / 100;

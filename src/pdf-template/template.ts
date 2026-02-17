@@ -182,7 +182,7 @@ export function templateInvoice(
         </tr>
         <tr>
           <td></td>
-          <td><strong>ภาษีมูลค่าเพิ่ม {{vat_amount_percent}} (VAT amount)</strong></td>
+          <td><strong>ภาษีมูลค่าเพิ่ม (VAT amount)</strong></td>
           <td>${data.summary.vat}</td>
         </tr>
         <tr>
@@ -397,7 +397,7 @@ export function templateReceipt(
         </tr>
         <tr>
           <td></td>
-          <td><strong>ภาษีมูลค่าเพิ่ม {{vat_amount_percent}} (VAT amount)</strong></td>
+          <td><strong>ภาษีมูลค่าเพิ่ม (VAT amount)</strong></td>
           <td>${data.summary.vat}</td>
         </tr>
         <tr>
