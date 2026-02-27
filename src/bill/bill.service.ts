@@ -928,7 +928,10 @@ export class BillService {
           }
         }
         if (el && el.name) {
-          let name = `${el.name} เดือน: ${input.month}/${input.year}`;
+          let name = `${el.name}`;
+          if (el?.type) {
+            name = `${el.name} เดือน: ${input.month}/${input.year}`;
+          }
           let qty = 1;
           let unitPrice = el.price;
           if (
