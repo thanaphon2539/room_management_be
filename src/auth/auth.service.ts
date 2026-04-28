@@ -12,7 +12,7 @@ export class AuthService {
   private readonly saltRound: number;
   constructor(
     private readonly prisma: PrismaService,
-    private jwtService: JwtService
+    private jwtService: JwtService,
   ) {
     this.logger = new Logger(AuthService.name);
   }
@@ -24,7 +24,7 @@ export class AuthService {
           {
             message: "กรุณากรอกข้อมูล username และ password ให้ถูกต้อง",
           },
-          HttpStatus.BAD_REQUEST
+          HttpStatus.BAD_REQUEST,
         );
       }
       const user = await this.prisma.user.findFirst({
@@ -41,12 +41,12 @@ export class AuthService {
               description: "Incorrect user",
             },
           },
-          HttpStatus.BAD_REQUEST
+          HttpStatus.BAD_REQUEST,
         );
       }
       const isValidPassword = await bcrypt.compareSync(
         input.password,
-        user.password
+        user.password,
       );
       if (!isValidPassword) {
         throw new HttpException(
@@ -57,7 +57,7 @@ export class AuthService {
               description: "Incorrect Password",
             },
           },
-          HttpStatus.BAD_REQUEST
+          HttpStatus.BAD_REQUEST,
         );
       }
       const token = this._generateAccessToken({
@@ -73,10 +73,12 @@ export class AuthService {
 
   private _generateAccessToken(payload: IUser) {
     const token = this.jwtService.sign(payload, {
-      expiresIn: process.env.AUTH_JWT_TOKEN_EXPIRES_IN,
+      secret: process.env.AUTH_JWT_SECRET,
+      expiresIn: process.env.AUTH_JWT_TOKEN_EXPIRES_IN as any,
     });
     const refreshToken = this.jwtService.sign(payload, {
-      expiresIn: process.env.AUTH_JWT_REFRESH_TOKEN_EXPIRES_IN,
+      secret: process.env.AUTH_JWT_SECRET,
+      expiresIn: process.env.AUTH_JWT_REFRESH_TOKEN_EXPIRES_IN as any,
     });
     const accessTokenPayload: JwtPayload = this.jwtService.decode(token);
     const refresgTokenPayload: JwtPayload =
