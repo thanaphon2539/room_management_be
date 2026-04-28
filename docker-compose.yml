@@ -13,7 +13,6 @@ services:
       - db
     command: >
       sh -c "pnpm prisma generate &&
-             pnpm prisma migrate deploy &&
              pnpm run start:dev"
 
   db:
